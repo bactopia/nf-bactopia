@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Plugin-Id: nf-bactopia
+Plugin-Version: 0.0.1
+Plugin-Class: nextflow.bactopia.BactopiaPlugin
+Plugin-Provider: nextflow
+Plugin-Requires: >=24.10.5
