@@ -129,18 +129,4 @@ class Utils {
             }
         }
     }
-
-    //
-    // Return a random element from a list
-    //
-    public static String motd() {
-        def messages = [
-            "Welcome to Bactopia!",
-            "Bactopia is a pipeline for the analysis of bacterial genomes.",
-        ]
-        def random = new Random()
-        def index = random.nextInt(messages.size())
-        return messages[index]
-    }
-
 }

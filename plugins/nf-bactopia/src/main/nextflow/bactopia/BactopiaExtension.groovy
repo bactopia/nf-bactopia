@@ -30,11 +30,11 @@ import nextflow.script.WorkflowMetadata
 import nextflow.Session
 
 import nextflow.bactopia.BactopiaConfig
-import nextflow.bactopia.Schema
+import nextflow.bactopia.BactopiaSchema
 import nextflow.bactopia.nfschema.SummaryCreator
-import static nextflow.bactopia.Template.getLogColors
-import static nextflow.bactopia.Template.getLogo
 
+import static nextflow.bactopia.BactopiaTemplate.getLogColors
+import static nextflow.bactopia.BactopiaTemplate.getLogo
 import static nextflow.bactopia.nfschema.Common.getLongestKeyLength
 
 /**
@@ -90,8 +90,7 @@ class BactopiaExtension extends PluginExtensionPoint {
         def String schemaFilename = options?.containsKey('parameters_schema') ? options.parameters_schema as String : config.parametersSchema
 
         def colors = getLogColors(config.monochromeLogs)
-        String output  = ''
-        output += 
+        String output = ''
         log.info getLogo(workflow, config.monochromeLogs, params.workflow.name, params.workflow.description)
 
         def Map paramsMap = paramsSummaryMap(workflow, parameters_schema: schemaFilename)
@@ -138,7 +137,7 @@ class BactopiaExtension extends PluginExtensionPoint {
     void validateParameters(
         Map options = null
     ) {
-        def Schema validator = new Schema(config)
+        def BactopiaSchema validator = new BactopiaSchema(config)
         validator.validateParameters(
             options,
             session.params,

@@ -8,7 +8,7 @@ package nextflow.bactopia
 import groovy.util.logging.Slf4j
 
 @Slf4j
-class Template {
+class BactopiaTemplate {
 
     //
     // Check params.hostnames
@@ -246,7 +246,7 @@ class Template {
     //
     public static String getLogo(workflow, monochrome_logs, worflow_name, worflow_description) {
         Map colors = this.getLogColors(monochrome_logs)
-         if (worflow_name == "bactopia") {
+        if (worflow_name == "bactopia") {
             String.format(
                 """\n
                 -${colors.dim}-------------------------------------------${colors.reset}-

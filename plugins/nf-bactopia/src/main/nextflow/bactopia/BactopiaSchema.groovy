@@ -32,12 +32,12 @@ import nextflow.bactopia.BactopiaConfig
 import nextflow.bactopia.nfschema.JsonSchemaValidator
 
 @Slf4j
-class Schema {
+class BactopiaSchema {
 
     private ValidatorFactory validator
     private BactopiaConfig config
 
-    Schema(BactopiaConfig config) {
+    BactopiaSchema(BactopiaConfig config) {
         this.validator = new ValidatorFactory()
             .withJsonNodeFactory(new OrgJsonNode.Factory())
             .withEvaluatorFactory(new FormatEvaluatorFactory())
