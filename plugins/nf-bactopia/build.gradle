@@ -50,13 +50,13 @@ sourceSets {
 }
 
 ext {
-    nextflowVersion = '24.11.0-edge'
+    nextflowVersion = '24.10.5'
 }
 
 dependencies {
     // This dependency is exported to consumers, that is to say found on their compile classpath.
     compileOnly "io.nextflow:nextflow:$nextflowVersion"
-    compileOnly 'org.slf4j:slf4j-api:1.7.10'
+    compileOnly 'org.slf4j:slf4j-api:2.1.0-alpha1'
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
     // add here plugins dependenc
