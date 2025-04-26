@@ -4,19 +4,22 @@
 // Modified from NF-Core's template: https://github.com/nf-core/tools
 package nextflow.bactopia
 
-import org.json.JSONArray
-import org.json.JSONObject
-
+import groovy.util.logging.Slf4j
 import java.io.RandomAccessFile
 import java.util.stream.IntStream
 import java.util.zip.GZIPInputStream
+import org.json.JSONArray
+import org.json.JSONObject
 import org.yaml.snakeyaml.Yaml
 
-class Utils {
+@Slf4j
+class BactopiaUtils {
+
+
     //
     // When running with -profile conda, warn if channels have not been set-up appropriately
     //
-    public static void checkCondaChannels(log) {
+    public static void checkCondaChannels() {
         Yaml parser = new Yaml()
         def channels = []
         try {
@@ -45,6 +48,7 @@ class Utils {
         }
     }
 
+
     //
     // Join module args with appropriate spacing
     //
@@ -52,10 +56,11 @@ class Utils {
         return ' ' + args_list.join(' ')
     }
 
+
     //
     //  Verify input is a positive integer
     //
-    public static Integer isPositiveInteger(value, name, log) {
+    public static Integer isPositiveInteger(value, name) {
         def error = 0
         if (value.getClass() == Integer) {
             if (value < 0) {
@@ -74,12 +79,18 @@ class Utils {
         return error
     }
 
+
     //
     //  Verify input file exists
     //
     public static Boolean fileExists(filename) {
-        return new File(filename).exists()
+        if (isLocal(filename)) {
+            return new File(filename).exists()
+        }
+        // For remote files, we assume they exist
+        return true
     }
+
 
     //
     // Check if file is remote (e.g. AWS, Azure, GCP)
@@ -90,11 +101,13 @@ class Utils {
         }
         return true
     }
+
+
     //
-    //  Verify input file exists
+    //  Check is a file is not found
     //
     public static Integer fileNotFound(filename, parameter, log) {
-        if (!new File(filename).exists()) {
+        if (!fileExists(filename)) {
             log.error '* --'+ parameter +': Unable to find "' + filename + '", please verify it exists.'.trim()
             return 1
         }
@@ -105,7 +118,7 @@ class Utils {
     //
     //  Verify input file is GZipped
     //
-     public static Integer fileNotGzipped(filename, parameter, log) {
+    public static Integer fileNotGzipped(filename, parameter, log) {
         // https://github.com/ConnectedPlacesCatapult/TomboloDigitalConnector/blob/master/src/main/java/uk/org/tombolo/importer/ZipUtils.java
 
         if (fileNotFound(filename, parameter, log)) {

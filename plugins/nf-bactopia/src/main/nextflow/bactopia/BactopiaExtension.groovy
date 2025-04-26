@@ -33,6 +33,7 @@ import nextflow.bactopia.BactopiaConfig
 import nextflow.bactopia.BactopiaSchema
 import nextflow.bactopia.nfschema.SummaryCreator
 
+import static nextflow.bactopia.inputs.BactopiaTools.collectInputs
 import static nextflow.bactopia.BactopiaTemplate.getLogColors
 import static nextflow.bactopia.BactopiaTemplate.getLogo
 import static nextflow.bactopia.nfschema.Common.getLongestKeyLength
@@ -59,6 +60,21 @@ class BactopiaExtension extends PluginExtensionPoint {
         def Map params = (Map)session.params ?: [:]
         config = new BactopiaConfig(session?.config?.navigate('bactopia') as Map, params)
     }
+
+
+    //
+    // Collect Bactopia Tool inputs
+    //
+    @Function
+    public List bactopiaToolInputs(
+        String bactopiaDir,
+        String extension,
+        String includeFile,
+        String excludeFile
+    ) {
+        return collectInputs(bactopiaDir, extension, includeFile, excludeFile)
+    }
+
 
     //
     // Groovy Map summarising parameters/workflow options used by the pipeline
