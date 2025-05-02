@@ -18,11 +18,14 @@ package nextflow.bactopia
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import java.nio.file.Path
+import java.nio.file.Paths
 import nextflow.Session
 import nextflow.trace.TraceObserver
 
 import nextflow.bactopia.BactopiaConfig
 import nextflow.bactopia.nfschema.HelpMessageCreator
+import static nextflow.bactopia.BactopiaMotD.getMotD
 
 /**
  * Bactopia workflow observer
@@ -59,6 +62,9 @@ class BactopiaObserver implements TraceObserver {
 
     @Override
     void onFlowComplete() {
-        log.info "Pipeline complete! 👋"
+        log.info getMotD(false)
     }
+
+    void onWorkflowPublish(String name, Object value) {}
+    void onFilePublish(Path destination, Path source, Map annotations) {}
 }

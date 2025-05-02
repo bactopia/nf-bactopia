@@ -33,7 +33,6 @@ class BactopiaTools {
                                 if (!exclusions.contains(sample)) {
                                     if (_isSampleDir(sample, bactopiaDir)) {
                                         def List inputs = _collectInputs(sample, bactopiaDir, extension)
-                                        log.info ("inputs: ${inputs.getClass()}")
                                         if (inputs[0] instanceof String) {
                                             missing << inputs
                                         } else {

@@ -12,6 +12,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.yaml.snakeyaml.Yaml
 
+import static nextflow.bactopia.BactopiaTemplate.logError
+
 @Slf4j
 class BactopiaUtils {
 
@@ -106,9 +108,9 @@ class BactopiaUtils {
     //
     //  Check is a file is not found
     //
-    public static Integer fileNotFound(filename, parameter, log) {
+    public static Integer fileNotFound(filename, parameter) {
         if (!fileExists(filename)) {
-            log.error '* --'+ parameter +': Unable to find "' + filename + '", please verify it exists.'.trim()
+            logError('* --'+ parameter +': Unable to find "' + filename + '", please verify it exists.'.trim())
             return 1
         }
         return 0
@@ -118,10 +120,10 @@ class BactopiaUtils {
     //
     //  Verify input file is GZipped
     //
-    public static Integer fileNotGzipped(filename, parameter, log) {
+    public static Integer fileNotGzipped(filename, parameter) {
         // https://github.com/ConnectedPlacesCatapult/TomboloDigitalConnector/blob/master/src/main/java/uk/org/tombolo/importer/ZipUtils.java
 
-        if (fileNotFound(filename, parameter, log)) {
+        if (fileNotFound(filename, parameter)) {
             return 1
         } else {
             int magic = 0

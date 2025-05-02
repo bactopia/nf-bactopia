@@ -44,13 +44,6 @@ class SummaryCreator {
             workflowSummary['revision'] = workflow.revision
         }
         workflowSummary['runName']      = workflow.runName
-        if (workflow.containerEngine) {
-            workflowSummary['containerEngine'] = workflow.containerEngine
-        }
-        if (workflow.container) {
-            workflowSummary['container'] = workflow.container
-        }
-
         workflowSummary['launchDir']    = workflow.launchDir
         workflowSummary['workDir']      = workflow.workDir
         workflowSummary['projectDir']   = workflow.projectDir

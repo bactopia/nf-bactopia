@@ -233,6 +233,13 @@ class BactopiaTemplate {
         return colorcodes
     }
 
+    // Logs error message disguised as a info
+    public static void logError(message) {
+        Map colors = this.getLogColors(false)
+        log.info "${colors.red}$message${colors.reset}"
+    }
+
+
     //
     // Prints a dashed line, some might even call it 'fancy'
     //
@@ -248,7 +255,7 @@ class BactopiaTemplate {
         Map colors = this.getLogColors(monochrome_logs)
         if (worflow_name == "bactopia") {
             String.format(
-                """\n
+                """
                 -${colors.dim}-------------------------------------------${colors.reset}-
                 ${colors.blue}   _                _              _             ${colors.reset}
                 ${colors.blue}  | |__   __ _  ___| |_ ___  _ __ (_) __ _       ${colors.reset}
@@ -263,7 +270,7 @@ class BactopiaTemplate {
             )
         } else if (worflow_name == "staphopia") {
             String.format(
-                """\n
+                """
                 -${colors.dim}------------------------------------------------${colors.reset}-
                 ${colors.blue}       _              _                 _            ${colors.reset}
                 ${colors.blue}   ___| |_ __ _ _ __ | |__   ___  _ __ (_) __ _      ${colors.reset}
@@ -278,7 +285,7 @@ class BactopiaTemplate {
             )
         } else if (worflow_name == "enteropia") {
             String.format(
-                """\n
+                """
                 -${colors.dim}---------------------------------------------------------------------------------------${colors.reset}-
                 ${colors.blue}              _                       _             ${colors.reset}
                 ${colors.blue}    ___ _ __ | |_ ___ _ __ ___  _ __ (_) __ _       ${colors.reset}
@@ -293,7 +300,7 @@ class BactopiaTemplate {
             )
         } else if (worflow_name == "cleanyerreads") {
             String.format(
-                """\n
+                """
                 -${colors.dim}------------------------------------------------------------------------${colors.reset}-
                 ${colors.blue}    ____ _                   __   __          ____                _              ${colors.reset}
                 ${colors.blue}   / ___| | ___  __ _ _ __   \\ \\ / /__ _ __  |  _ \\ ___  __ _  __| |___       ${colors.reset}
@@ -325,7 +332,7 @@ class BactopiaTemplate {
             )
         } else if (worflow_name == "teton") {
             String.format(
-                """\n
+                """
                 -${colors.dim}------------------------------------------------------------------${colors.reset}-
                 ${colors.blue}   _       _                          _     *                     ${colors.reset}
                 ${colors.blue}  | |_ ___| |_ ___  _ __       *     / \\_       *   /\\'__       ${colors.reset}
@@ -340,8 +347,7 @@ class BactopiaTemplate {
                 """.stripIndent()
             )
         } else {
-            String.format(
-                """\n
+            String.format("""
                 -${colors.dim}------------------------------------------------------------------${colors.reset}-
                 ${colors.blue}   _                _              _         _              _              ${colors.reset}
                 ${colors.blue}  | |__   __ _  ___| |_ ___  _ __ (_) __ _  | |_ ___   ___ | |___          ${colors.reset}
@@ -355,5 +361,75 @@ class BactopiaTemplate {
                 """.stripIndent()
             )
         }
+    }
+
+    public static String getWorkflowSummary(workflow, params, manifest_version, monochrome_logs) {
+        Map colors = getLogColors(monochrome_logs)
+        def output = "\n"
+
+        if (params.workflow.name == "bactopia") {
+            output += "Bactopia Execution Summary"
+        } else if (params.workflow.name == "staphopia") {
+            output += "Staphopia Execution Summary"
+        } else if (params.workflow.name == "enteropia") {
+            output += "Enteropia Execution Summary"
+        } else if (params.workflow.name == "cleanyerreads") {
+            output += "Clean-yer-reads Execution Summary"
+        } else if (params.workflow.name == "teton") {
+            output += "Teton Execution Summary\n"
+        } else {
+            output += "Bactopia Tool Execution Summary"
+        }
+
+        output += """
+            ------------------------------
+            Workflow         : ${params.workflow.name}
+            Bactopia Version : ${manifest_version}
+            Nextflow Version : ${workflow.nextflow.version}
+            Command Line     : ${workflow.commandLine}
+            Launch Dir       : ${workflow.launchDir}
+            Profile          : ${workflow.profile}
+            Completed At     : ${workflow.complete}
+            Duration         : ${workflow.duration}
+            Resumed          : ${workflow.resume}
+            Success          : ${workflow.success}
+            ${colors.bgreen}Merged Results${colors.reset}   : ${colors.green}${params.outdir}/${params.rundir}${colors.reset}
+            """.stripIndent()
+        
+
+        if (params.workflow.name == "bactopia" || params.workflow.name == "staphopia") {
+            output += """
+                Further analyze your samples using Bactopia Tools, with the following command:
+                --------------------------------------------------------------------------------
+                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf <REPLACE_WITH_BACTOPIA_TOOL_NAME>${colors.reset}
+
+                Examples:
+                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf pangenome${colors.reset}
+                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf merlin${colors.reset}
+                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf sccmec${colors.reset}
+
+                See the full list of available Bactopia Tools: ${colors.cyan}bactopia --list_wfs${colors.reset}
+            """.stripIndent()
+        } else if (params.workflow.name == "teton") {
+            output += """
+                Further analyze bacterial samples using Bactopia, with the following command:
+                --------------------------------------------------------------------------------
+                ${colors.cyan}bactopia -profile ${workflow.profile} --samples ${params.outdir}/bactopia-runs/${params.rundir}/merged-results/teton-prepare.tsv${colors.reset}
+            """.stripIndent()
+        } else if (params.workflow.name == "cleanyerreads") {
+            output += """
+                Further analyze your samples using Bactopia Tools, with the following command:
+                --------------------------------------------------------------------------------
+                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf <REPLACE_WITH_BACTOPIA_TOOL_NAME>${colors.reset}
+
+                Examples:
+                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf bracken${colors.reset}
+                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf kraken2${colors.reset}
+
+                See the full list of available Bactopia Tools: ${colors.cyan}bactopia --list_wfs${colors.reset}
+            """.stripIndent()
+        }
+
+        return output
     }
 }

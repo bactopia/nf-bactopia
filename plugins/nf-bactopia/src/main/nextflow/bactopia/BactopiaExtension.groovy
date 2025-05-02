@@ -36,6 +36,7 @@ import nextflow.bactopia.nfschema.SummaryCreator
 import static nextflow.bactopia.inputs.BactopiaTools.collectInputs
 import static nextflow.bactopia.BactopiaTemplate.getLogColors
 import static nextflow.bactopia.BactopiaTemplate.getLogo
+import static nextflow.bactopia.BactopiaTemplate.getWorkflowSummary
 import static nextflow.bactopia.nfschema.Common.getLongestKeyLength
 
 /**
@@ -129,6 +130,21 @@ class BactopiaExtension extends PluginExtensionPoint {
         return output
     }
 
+    /*
+     * Beautify parameters for summary and return as string
+     */
+    @Function
+    public String workflowSummary() {
+        def Map params = session.params
+        def WorkflowMetadata metadata = session.getWorkflowMetadata()
+        return getWorkflowSummary( 
+            metadata,
+            params,
+            session.config.manifest.version,
+            config.monochromeLogs,
+        )
+    }
+
     private Map flattenNestedParamsMap(Map paramsMap) {
         def Map returnMap = [:]
         paramsMap.each { param, value ->
@@ -151,13 +167,15 @@ class BactopiaExtension extends PluginExtensionPoint {
     */
     @Function
     void validateParameters(
-        Map options = null
+        Map options = null,
+        Boolean isBactopiaTool = false
     ) {
         def BactopiaSchema validator = new BactopiaSchema(config)
         validator.validateParameters(
             options,
             session.params,
-            session.baseDir.toString()
+            session.baseDir.toString(),
+            isBactopiaTool
         )
     }
 }

@@ -31,11 +31,20 @@ import nextflow.util.MemoryUnit
 import nextflow.bactopia.BactopiaConfig
 import nextflow.bactopia.nfschema.JsonSchemaValidator
 
+import static nextflow.bactopia.nfschema.Common.getBasePath
+import static nextflow.bactopia.BactopiaUtils.isLocal
+import static nextflow.bactopia.BactopiaUtils.isPositiveInteger
+import static nextflow.bactopia.BactopiaUtils.fileNotFound
+import static nextflow.bactopia.BactopiaUtils.fileNotGzipped
+import static nextflow.bactopia.BactopiaTemplate.getLogColors
+import static nextflow.bactopia.BactopiaTemplate.logError
+
 @Slf4j
 class BactopiaSchema {
 
     private ValidatorFactory validator
     private BactopiaConfig config
+    private Boolean isBactopiaTool = false
 
     BactopiaSchema(BactopiaConfig config) {
         this.validator = new ValidatorFactory()
@@ -125,11 +134,13 @@ class BactopiaSchema {
     // The length of the terminal
     private Integer terminalLength = System.getenv("COLUMNS")?.toInteger() ?: 100
 
-    public validateParameters(
+    public String validateParameters(
         Map options = null,
         Map inputParams = [:],
-        String baseDir
+        String baseDir,
+        Boolean isBactopiaTool = false
     ) {
+        String run_type = ""
         log.debug "Starting parameters validation"
         // Read schema file
         def String schemaFilename = options?.containsKey('parameters_schema') ? options.parameters_schema as String : config.parametersSchema
@@ -142,199 +153,35 @@ class BactopiaSchema {
         // Validate the parameters
         def validator = new JsonSchemaValidator(config)
         Tuple2<List<String>,List<String>> validationResult = validator.validate(paramsJSON, schemaString)
-        def validationErrors = validationResult[0]
+        def  validationErrors = validationResult[0]
         def unevaluatedParams = validationResult[1]
-        log.info "Validation errors: ${validationErrors}"
-        log.info "Unevaluated parameters: ${unevaluatedParams}"
+        //log.info "Validation errors: ${validationErrors}"
+        //log.info "Unevaluated parameters: ${unevaluatedParams}"
 
-/*
-        // Read the JSON schema
-
-        // Collect expected parameters from the schema
-        def Map schemaParams = [:]
-        schemaParams += (Map) new JsonSlurper().parseText(schema_string).get('$defs')
-        def expectedParams = []
-        def enums = [:]
-        for (group in schemaParams) {
-            def Map properties = (Map) group.value['properties']
-            for (p in properties) {
-                // Store the expected parameter name
-                def String key = (String) p.key
-                expectedParams.push(p.key)
-
-                // Collect enums for validation error messages
-                def Map property = (Map) properties[key] as Map
-                if (property.containsKey('enum')) {
-                    enums[p.key] = property['enum']
-                }
+        if (validationErrors.size() > 0) {
+            logError("The following parameters are invalid:")
+            for (error in validationErrors) {
+                logError("    ${error}")
             }
-        }
-
-        // Compare expected against parameters received
-        def expectedParamsLowerCase = expectedParams.collect{ it.replace("-", "").toLowerCase() }
-        def ignoreParams = options?.containsKey('ignore_params') ? options.ignore_params as String : config.ignoreParams
-        for (param in params.keySet()) {
-            // Handle core Nextflow parameters (error)
-            if (NF_OPTIONS.contains(param)) {
-                errors << "You used a core Nextflow option with two hyphens: '--${param}'. Please resubmit with '-${param}'"
-            }
-
-            // Handle unexpected parameters (warning)
-            def paramLowerCase = param.replace("-", "").toLowerCase()
-            def isCamelCaseBug = (param.contains("-") && !expectedParams.contains(param) && expectedParamsLowerCase.contains(paramLowerCase))
-            if (!expectedParams.contains(param) && !ignoreParams.contains(param) && !isCamelCaseBug) {
-                // Temporarily remove camelCase/camel-case params #1035
-                def unexpectedParamsLowerCase = unexpectedParams.collect{ it.replace("-", "").toLowerCase()}
-                if (!unexpectedParamsLowerCase.contains(paramLowerCase)){
-                    warnings << "* --${param}: ${params[unexpectedParam].toString()}"
-                }
-            }
-        }
-
-        // Print warnings
-        if (this.hasWarnings()) {
-            def msg = "The following invalid input values have been detected:\n\n" + this.getWarnings().join('\n').trim() + "\n\n"
-            log.warn(msg)
-        }
-
-        //=====================================================================//
-        // Validate parameters against the schema
-        InputStream input_stream = new File(Path.of(getBasePath(baseDir, schemaFilename))).newInputStream()
-        JSONObject raw_schema = new JSONObject(new JSONTokener(input_stream))
-
-        // Remove anything that's in params.schema_ignore_params
-        raw_schema = removeIgnoredParams(raw_schema, params)
-
-        Schema schema = SchemaLoader.load(raw_schema)
-
-
-
-        
-
-        // Validate
-        try {
-            schema.validate(params_json)
-        } catch (ValidationException e) {
-            println ''
-            log.error 'ERROR: Validation of pipeline parameters failed!'
-            JSONObject exceptionJSON = e.toJSON()
-            printExceptions(exceptionJSON, params_json, log, enums)
-            println ''
-            has_error = true
-        }
-
-
-        if (hasErrors()) {
+            log.info " "
+            log.error "Validation of pipeline parameters failed! Please correct to continue"
             System.exit(1)
         }
-*/
+
+        if (isBactopiaTool) {
+            run_type = validateBactopiaToolParams(inputParams)
+        } else {
+            run_type = validateBactopiaParams(inputParams)
+        }
+
         log.debug "Finishing parameters validation"
+
+        return run_type
     }
 
 
-    //==================================================================================================================
-    //
-    // BEGIN functions have been sourced and modified from nextflow/nf-schema
-    //
-    private Tuple2<List<String>,List<String>> validateObject(JsonNode input, String validationType, Object rawJson, String schemaString) {
-        def JSONObject schema = new JSONObject(schemaString)
-        
-        def Validator.Result result = this.validator.validate(schema, input)
-        def List<String> errors = []
-        result.getErrors().each { error ->
-            def String errorString = error.getError()
-
-            // Skip double error in the parameter schema
-            if (errorString.startsWith("Value does not match against the schemas at indexes") && validationType == "parameter") {
-                return
-            }
-
-            def String instanceLocation = error.getInstanceLocation()
-            def String value = getValueFromJsonPointer(instanceLocation, rawJson)
-
-            // Return a standard error message for object validation
-            if (validationType == "object") {
-                errors.add("${instanceLocation ? instanceLocation + ' ' : ''}(${value}): ${errorString}" as String)
-                return
-            }
-
-            // Get the custom errorMessage if there is one and the validation errors are not about the content of the file
-            def String schemaLocation = error.getSchemaLocation().replaceFirst(/^[^#]+/, "")
-            def String customError = ""
-            if (!errorString.startsWith("Validation of file failed:")) {
-                customError = getValueFromJsonPointer("${schemaLocation}/errorMessage", schema) as String
-            }
-
-            // Change some error messages to make them more clear
-            def String keyword = error.getKeyword()
-            if (keyword == "required") {
-                def Matcher matcher = errorString =~ ~/\[\[([^\[\]]*)\]\]$/
-                def String missingKeywords = matcher.findAll().flatten().last()
-                errorString = "Missing required ${validationType}(s): ${missingKeywords}"
-            }
-
-            def List<String> locationList = instanceLocation.split("/").findAll { it != "" } as List
-
-            def String printableError = "${validationType == 'field' ? '->' : '*'} ${errorString}" as String
-            if (locationList.size() > 0 && isInteger(locationList[0]) && validationType == "field") {
-                def Integer entryInteger = locationList[0] as Integer
-                def String entryString = "Entry ${entryInteger + 1}" as String
-                def String fieldError = "${errorString}" as String
-                if(locationList.size() > 1) {
-                    fieldError = "Error for ${validationType} '${locationList[1..-1].join("/")}' (${value}): ${errorString}"
-                }
-                printableError = "-> ${entryString}: ${fieldError}" as String
-            } else if (validationType == "parameter") {
-                def String fieldName = locationList.join(".")
-                if(fieldName != "") {
-                    printableError = "* --${fieldName} (${value}): ${errorString}" as String
-                }
-            }
-
-            if(customError != "") {
-                printableError = printableError + " (${customError})"
-            }
-
-            errors.add(printableError)
-
-        }
-        def List<String> unevaluated = getUnevaluated(result, rawJson)
-        return Tuple.tuple(errors, unevaluated)
-    }
-
-    public Tuple2<List<String>,List<String>> validate(JSONArray input, String schemaString) {
-        def JsonNode jsonInput = new OrgJsonNode.Factory().wrap(input)
-        return this.validateObject(jsonInput, "field", input, schemaString)
-    }
-
-    public Tuple2<List<String>,List<String>> validate(JSONObject input, String schemaString) {
-        def JsonNode jsonInput = new OrgJsonNode.Factory().wrap(input)
-        return this.validateObject(jsonInput, "parameter", input, schemaString)
-    }
-
-    public Tuple2<List<String>,List<String>> validateObj(Object input, String schemaString) {
-        def JsonNode jsonInput = new OrgJsonNode.Factory().wrap(input)
-        return this.validateObject(jsonInput, "object", input, schemaString)
-    }
-
-    public static List<String> getUnevaluated(Validator.Result result, Object rawJson) {
-        def Set<String> evaluated = []
-        result.getAnnotations().each{ anno ->
-            if(anno.keyword in ["properties", "patternProperties", "additionalProperties"]){
-                evaluated.addAll(
-                    anno.annotation.collect{ it ->
-                    "${anno.instanceLocation.toString()}/${it.toString()}".replaceAll("^/+", "")
-                    }
-                )
-            }
-        }
-        def Set<String> all_keys = []
-        findAllKeys(rawJson, null, all_keys, '/')
-        def unevaluated_ = all_keys - evaluated
-        def unevaluated = unevaluated_.collect{ it -> !evaluated.contains(kebabToCamel(it)) ? it : null }
-        return unevaluated - null
-    }
-
+    //------------------------------------------------------------------------------------------------------------------
+    // BEGIN - nextflow/nf-schema functions
     //
     // Clean and check parameters relative to Nextflow native classes
     //
@@ -345,22 +192,18 @@ class BactopiaSchema {
             if (!p['value'] && p['value'] != 0) {
                 new_params.remove(p.key)
             }
-
             // Cast MemoryUnit to String
             if (p['value'] instanceof MemoryUnit) {
                 new_params.replace(p.key, p['value'].toString())
             }
-
             // Cast Duration to String
             if (p['value'] instanceof Duration) {
                 new_params.replace(p.key, p['value'].toString())
             }
-
             // Cast LinkedHashMap to String
             if (p['value'] instanceof LinkedHashMap) {
                 new_params.replace(p.key, p['value'].toString())
             }
-
             // Parsed nested parameters
             if (p['value'] instanceof Map) {
                 new_params.replace(p.key, cleanParameters(p['value'] as Map))
@@ -368,251 +211,330 @@ class BactopiaSchema {
         }
         return new_params
     }
+    // END - nextflow/nf-schema functions
 
-    //
-    // Get full path based on the base directory of the pipeline run
-    //
-    public static String getBasePath(String baseDir, String schemaFilename) {
-        if (Path.of(schemaFilename).exists()) {
-            return schemaFilename
+
+    public static String validateBactopiaToolParams(Map params) {
+        def Integer error = 0
+        def ArrayList missing_required = []
+
+        // General Bactopia Tool parameter checks
+        if (params.bactopia) {
+            if (fileNotFound(params.bactopia, "bactopia")) {
+                error += 1
+                missing_required << "--bactopia"
+            }
         } else {
-            return "${baseDir}/${schemaFilename}"
+            missing_required << "--bactopia"
         }
-    }
-    //
-    // END of functions sourced from nextflow/nf-schema
-    //
-    //==================================================================================================================
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    //
-    // Beautify parameters for --help
-    //
-    /*
-    public static Map paramsHelp(workflow, params, command, schema_filename=['nextflow_schema.json'], print_example=true, print_required=false) {
-        Map colors = NfcoreTemplate.logColours(params.monochrome_logs)
-        Integer num_hidden = 0
-        String required_output = ''
-        String optional_output = ''
-        String param_required = ''
-        String output = ''
-        if (print_example == true) {
-            output += 'Typical pipeline command:\n\n'
-            output += "  ${colors.cyan}${command}${colors.reset}\n\n"
+        if (params.include && params.exclude) {
+            logError("'--include' and '--exclude' cannot be used together")
+            error += 1
+        } else if (params.include) {
+            error += fileNotFound(params.include, "include")
+        } else if (params.exclude) {
+            error += fileNotFound(params.exclude, "exclude")
         }
-        Map params_map = paramsLoad("${workflow.projectDir}", schema_filename)
-        Integer max_chars  = paramsMaxChars(params_map) + 1
-        Integer desc_indent = max_chars + 14
-        Integer dec_linewidth = 160 - desc_indent
-        for (group in params_map.keySet()) {
-            Boolean is_required = false
-            if (print_required == true && group != "Required Parameters") {
-                continue
+
+        // Workflow specific parameter checks
+        if (params.workflow.name == "ariba") {
+            if (!params.ariba_db) {
+                error += 1
+                missing_required << "--ariba_db"
             }
-
-            Integer num_params = 0
-            String group_output = ''
-            if (group != 'Required Parameters') {
-                group_output += colors.underlined + colors.bold + group + colors.reset + '\n'
+        } else if (params.workflow.name == "bakta") {
+            if (params.bakta_db) {
+                if (!params.download_bakta) {
+                    if (params.bakta_db.endsWith(".tar.gz")) {
+                        error += fileNotFound(params.bakta_db, "bakta_db")
+                    } else {
+                        error += fileNotFound("${params.bakta_db}/bakta.db", "bakta_db")
+                    }
+                }
+            } else {
+                missing_required << "--bakta_db"
             }
-            String group_optional = ''
-            String group_required = ''
-            def group_params = params_map.get(group)  // This gets the parameters of that particular group
-            for (param in group_params.keySet()) {
-                String param_output = ''
-                if (!params.help_all) {
-                    if (group_params.get(param).hidden && (!params.show_hidden_params || !params.help_all)) {
-                        num_hidden += 1
-                        continue;
+        } else if (params.workflow.name == "blastn") {
+            if (params.blastn_query) {
+                error += fileNotFound(params.blastn_query, "blastn_query")
+            } else {
+                missing_required << "--blastn_query"
+            }
+        } else if (params.workflow.name == "blastp") {
+            if (params.blastp_query) {
+                error += fileNotFound(params.blastp_query, "blastp_query")
+            } else {
+                missing_required << "--blastp_query"
+            }
+        } else if (params.workflow.name == "blastx") {
+            if (params.blastx_query) {
+                error += fileNotFound(params.blastx_query, "blastx_query")
+            } else {
+                missing_required << "--blastx_query"
+            }
+        } else if (params.workflow.name == "eggnog") {
+            if (params.eggnog_db) {
+                if (!params.download_eggnog) {
+                    if (params.eggnog_db.endsWith(".tar.gz")) {
+                        error += fileNotFound(params.eggnog_db, "eggnog_db")
+                    } else {
+                        error += fileNotFound("${params.eggnog_db}/eggnog.db", "eggnog_db")
                     }
                 }
-                if (group_params.get(param).containsKey('header')) {
-                    param_output += '  ' + colors.underlined + colors.bold + group_params.get(param).header + colors.reset + '\n'
-
-                    if (group_params.get(param).header.endsWith('Assembly')) {
-                        param_output += '  ' + colors.dim + 'Note: Error free Illumina reads are simulated for assemblies' + colors.reset + '\n'
+            } else {
+                missing_required << "--eggnog_db"
+            }
+        } else if (params.workflow.name == "gamma") {
+            if (params.gamma_db) {
+                error += fileNotFound(params.gamma_db, "gamma_db")
+            } else {
+                missing_required << "--gamma_db"
+            }
+        } else if (params.workflow.name == "gtdb") {
+            if (params.gtdb) {
+                if (!params.download_gtdb) {
+                    if (params.gtdb.endsWith(".tar.gz")) {
+                        error += fileNotFound(params.gtdb, "gtdb")
+                    } else {
+                        error += fileNotFound("${params.gtdb}/metadata/metadata.txt", "gtdb")
                     }
                 }
-
-                def type = '[' + group_params.get(param).type + ']'
-                def description = group_params.get(param).description
-                def defaultValue = group_params.get(param).default ? " [default: " + group_params.get(param).default.toString() + "]" : ''
-                def description_default = description + colors.dim + defaultValue + colors.reset
-                // Wrap long description texts
-                // Loosely based on https://dzone.com/articles/groovy-plain-text-word-wrap
-                if (description_default.length() > dec_linewidth){
-                    List olines = []
-                    String oline = "" // " " * indent
-                    description_default.split(" ").each() { wrd ->
-                        if ((oline.size() + wrd.size()) <= dec_linewidth) {
-                            oline += wrd + " "
-                        } else {
-                            olines += oline
-                            oline = wrd + " "
-                        }
-                    }
-                    olines += oline
-                    description_default = olines.join("\n" + " " * desc_indent)
-                }
-
-                param_output += "  --" +  param.padRight(max_chars) + colors.dim + type.padRight(10) + colors.reset + description_default + '\n'
-                num_params += 1
-                
-                if (group == "Required Parameters") {
-                    group_required += param_output
-                } else if (group_params.get(param).containsKey('is_required')) {
-                    param_required += param_output
+            } else {
+                missing_required << "--gtdb"
+            }
+        } else if (params.workflow.name == "kraken2") {
+            if (params.kraken2_db) {
+                if (params.kraken2_db.endsWith(".tar.gz")) {
+                    error += fileNotFound(params.kraken2_db, "kraken2_db")
                 } else {
-                    group_optional += param_output
+                    error += fileNotFound("${params.kraken2_db}/hash.k2d", "kraken2_db")
                 }
+            } else {
+                missing_required << "--kraken2_db"
             }
-
-            if (num_params > 0) {
-                required_output += group_required
-                optional_output += group_output + group_optional + '\n'
+        } else if (params.workflow.name == "mashdist") {
+            if (params.mash_sketch) {
+                error += fileNotFound(params.mash_sketch, "mash_sketch")
+            } else {
+                missing_required << "--mash_sketch"
+            }
+        } else if (params.workflow.name == "midas") {
+            if (params.midas_db) {
+                if (params.midas_db.endsWith(".tar.gz")) {
+                    error += fileNotFound(params.midas_db, "midas_db")
+                } else {
+                    error += fileNotFound("${params.midas_db}/genome_info.txt", "midas_db")
+                }
+            } else {
+                missing_required << "--midas_db"
+            }
+        } else if (params.workflow.name == "mykrobe") {
+            if (!params.mykrobe_species) {
+                error += 1
+                missing_required << "--mykrobe_species"
+            }
+        } else if (params.workflow.name == "pangenome") {
+            if (params.traits) {
+                error += fileNotFound(params.traits, "traits")
+            }
+        } else if (params.workflow.name == "scoary") {
+            if (params.traits) {
+                error += fileNotFound(params.traits, "traits")
+            } else {
+                missing_required << "--traits"
+            }
+        } else if (params.workflow.name == "snippy") {
+            if (params.accession && params.reference) {
+                log.error "'--accession' and '--reference' cannot be used together"
+                error += 1
+            } else if (params.reference) {
+                error += fileNotFound(params.reference, "reference")
+            } else if (!params.accession && !params.reference) {
+                log.error "Either '--accession' and '--reference' is required"
+                error += 1
+            }
+        } else if (params.workflow.name == "srahumanscrubber") {
+            if (params.scrubber_db) {
+                if (!params.download_scrubber) {
+                    error += fileNotFound(params.scrubber_db, "scrubber_db")
+                }
+            } else {
+                missing_required << "--scrubber_db"
+            }
+        } else if (params.workflow.name == "sylph") {
+            if (params.sylph_db) {
+                error += fileNotFound(params.sylph_db, "sylph_db")
+            } else {
+                missing_required << "--sylph_db"
+            }
+        } else if (params.workflow.name == "tblastn") {
+            if (params.tblastn_query) {
+                error += fileNotFound(params.tblastn_query, "tblastn_query")
+            } else {
+                missing_required << "--tblastn_query"
+            }
+        } else if (params.workflow.name == "tblastx") {
+            if (params.tblastx_query) {
+                error += fileNotFound(params.tblastx_query, "tblastx_query")
+            } else {
+                missing_required << "--tblastx_query"
             }
         }
 
-        if (param_required.length() > 0) {
-            required_output += '\n  ' + colors.underlined + colors.bold + "Workflow Specific" + colors.reset + '\n'
-            required_output += param_required
+        // If errors print outcome
+        if (missing_required.size() > 0) {
+            logError("Required parameters are missing, please check: " + missing_required.join(", "))
+            error += 1
         }
 
-        def Map help = [:]
-        required_output = colors.underlined + colors.bold + 'Required Parameters' + colors.reset + '\n' + required_output
-        help['output'] = output + required_output + optional_output
-        help['num_hidden'] = num_hidden
-        return help
+        if (error > 0) {
+            log.error("\nValidation of pipeline parameters failed! Please correct to continue")
+            System.exit(1)
+        }
+
+        return "success"
     }
-    */
 
-    //
-    // Beautify parameters for --help
-    //
-    /*
-    public static String paramsRequired(workflow, params, schema_filename=['nextflow_schema.json']) {
-        Map colors = NfcoreTemplate.logColours(params.monochrome_logs)
-        Integer num_hidden = 0
-        String required_output = ''
-        String param_required = ''
-        String output = ''
-        Map params_map = paramsLoad("${workflow.projectDir}", schema_filename)
-        Integer max_chars = paramsMaxChars(params_map) + 1
-        Integer desc_indent = max_chars + 14
-        Integer dec_linewidth = 160 - desc_indent
-        for (group in params_map.keySet()) {
-            Integer num_params = 0
-            String group_output = ''
-            def group_params = params_map.get(group)  // This gets the parameters of that particular group
-            for (param in group_params.keySet()) {
-                String param_output = ''
-                if (!params.help_all) {
-                    if (group_params.get(param).hidden && !params.show_hidden_params) {
-                        num_hidden += 1
-                        continue;
-                    }
+
+    public static String validateBactopiaParams(Map params) {
+        def Integer error = 0
+        def String run_type = ""
+
+        if (params.samples) {
+            error += fileNotFound(params.samples, "samples")
+            run_type = "is_fofn"
+        } else if (params.r1 && params.r2 && params.ont && params.short_polish && params.sample) {
+            if (isLocal(params.r1)) {
+                error += fileNotGzipped(params.r1, "r1")
+            }
+            if (isLocal(params.r2)) {
+                error += fileNotGzipped(params.r2, "r2")
+            }
+            if (isLocal(params.ont)) {
+                error += fileNotGzipped(params.ont, "ont")
+            }
+            run_type = "short_polish"
+        } else if (params.r1 && params.r2 && params.ont && params.hybrid && params.sample) {
+            if (isLocal(params.r1)) {
+                error += fileNotGzipped(params.r1, "r1")
+            }
+            if (isLocal(params.r2)) {
+                error += fileNotGzipped(params.r2, "r2")
+            }
+            if (isLocal(params.ont)) {
+                error += fileNotGzipped(params.ont, "ont")
+            }
+            run_type = "hybrid"
+        } else if (params.r1 && params.r2 && params.se) {
+            logError("Cannot use --r1, --r2, and --se together")
+            error += 1
+        } else if (params.r1 && params.r2 && params.ont) {
+            logError("Cannot use --r1, --r2, and --ont together, unless using --short_polish or --hybrid")
+            error += 1
+        } else if (params.ont && params.se) {
+            logError("Cannot use --ont and --se together")
+            error += 1
+        } else if (params.r1 && params.r2 && params.sample) {
+            if (isLocal(params.r1)) {
+                error += fileNotGzipped(params.r1, "r1")
+            }
+            if (isLocal(params.r2)) {
+                error += fileNotGzipped(params.r2, "r2")
+            }
+            run_type = "paired-end"
+        } else if (params.ont && params.sample) {
+            if (isLocal(params.ont)) {
+                error += fileNotGzipped(params.ont, "ont")
+            }
+            run_type = "ont"
+        } else if (params.se && params.sample) {
+            if (isLocal(params.se)) {
+                error += fileNotGzipped(params.se, "se")
+            }
+            run_type = "single-end"
+        } else if (params.assembly && params.sample) {
+            if (isLocal(params.assembly)) {
+                error += fileNotGzipped(params.assembly, "assembly")
+            }
+            run_type = "assembly"
+        } else if (params.accessions) {
+            error += fileNotFound(params.accessions, "accessions")
+            run_type = "is_accessions"
+        } else if (params.accession) {
+            run_type = "is_accession"
+        } else {
+            logError("One or more required parameters are missing, please check and try again.")
+            error += 1
+        }
+
+        if (params.check_samples && !params.samples) {
+            logError("To use --check_samples, you must also provide a FOFN to check using --samples.")
+            error += 1
+        }
+
+        if (params.max_downloads >= 10) {
+            log.warn "Please be aware the value you have set for --max_downloads (${params.max_downloads}) may cause NCBI " +
+                     "to temporarily block your IP address due to too many queries at once."
+        }
+
+        if (params.genome_size) {
+            error += isPositiveInteger(params.genome_size, "genome_size")
+        }
+
+        if (params.containsKey('adaptors')) {
+            if (params.adaptors) {
+                if (isLocal(params.adaptors)) {
+                    error += fileNotFound(params.adaptors, "adaptors")
                 }
-                if (group_params.get(param).containsKey('header')) {
-                    param_output += '  ' + colors.underlined + colors.bold + group_params.get(param).header + colors.reset + '\n'
+            }
 
-                    if (group_params.get(param).header.endsWith('Assembly')) {
-                        param_output += '  ' + colors.dim + 'Note: Error free Illumina reads are simulated for assemblies' + colors.reset + '\n'
-                    }
+            if (params.phix) {
+                if (isLocal(params.phix)) {
+                    error += fileNotFound(params.phix, "phix")
                 }
+            }
+        }
 
-                def type = '[' + group_params.get(param).type + ']'
-                def description = group_params.get(param).description
-                def defaultValue = group_params.get(param).default ? " [default: " + group_params.get(param).default.toString() + "]" : ''
-                def description_default = description + colors.dim + defaultValue + colors.reset
-                // Wrap long description texts
-                // Loosely based on https://dzone.com/articles/groovy-plain-text-word-wrap
-                if (description_default.length() > dec_linewidth){
-                    List olines = []
-                    String oline = "" // " " * indent
-                    description_default.split(" ").each() { wrd ->
-                        if ((oline.size() + wrd.size()) <= dec_linewidth) {
-                            oline += wrd + " "
+        // following should only be checked for specific workflows
+        if (['bactopia', 'staphopia'].contains(params.workflow.name)) {
+            if (params.use_bakta) {
+                if (params.bakta_db) {
+                    if (!params.download_bakta) {
+                        if (params.bakta_db.endsWith(".tar.gz")) {
+                            error += fileNotFound(params.bakta_db, "bakta_db")
                         } else {
-                            olines += oline
-                            oline = wrd + " "
+                            error += fileNotFound("${params.bakta_db}/bakta.db", "bakta_db")
                         }
                     }
-                    olines += oline
-                    description_default = olines.join("\n" + " " * desc_indent)
-                }
-                param_output += "  --" +  param.padRight(max_chars) + colors.dim + type.padRight(10) + colors.reset + description_default + '\n'
-                num_params += 1
-
-                if (group == "Required Parameters") {
-                    group_output += param_output
-                } else if (group_params.get(param).containsKey('is_required')) {
-                    param_required += param_output
+                } else {
+                    logError("Bactopia requires --bakta_db to be set when using --use_bakta")
+                    error += 1
                 }
             }
-
-            if (num_params > 0){
-                required_output += group_output
+        } else if (params.workflow.name = "teton") {
+            if (params.kraken2_db) {
+                if (isLocal(params.kraken2_db)) {
+                    if (params.kraken2_db.endsWith(".tar.gz")) {
+                        error += fileNotFound(params.kraken2_db, "kraken2_db")
+                    } else {
+                        error += fileNotFound("${params.kraken2_db}/hash.k2d", "kraken2_db")
+                    }
+                }
+            } else 
+            if (params.kraken2_db) {
+                logError("Teton requires '--kraken2_db' to be provided")
+                error += 1
             }
         }
 
-        if (param_required.length() > 0) {
-            required_output += '\n  ' + colors.underlined + colors.bold + "Workflow Specific" + colors.reset + '\n'
-            required_output += param_required
+        if (error > 0) {
+            log.error "\nValidation of pipeline parameters failed! Please correct to continue"
+            System.exit(1)
         }
 
-        if (num_hidden > 0){
-            output += colors.dim + "!! Hiding $num_hidden params, use --show_hidden_params (or --help_all) to show them !!\n" + colors.reset
-        }
-        required_output = colors.underlined + colors.bold + 'Required Parameters' + colors.reset + '\n' + required_output + '\n'
-        required_output += NfcoreTemplate.dashedLine(params.monochrome_logs)
-        return required_output
+        return run_type
     }
-    */
 
     //
     // Beautify parameters for --list_wfs
@@ -693,297 +615,4 @@ class BactopiaSchema {
     }
     */
 
-    //
-    // Groovy Map summarising parameters/workflow options used by the pipeline
-    //
-    /*
-    public static LinkedHashMap paramsSummaryMap(workflow, params, schema_filename=['nextflow_schema.json']) {
-        // Get a selection of core Nextflow workflow options
-        def Map workflow_summary = [:]
-        if (workflow.revision) {
-            workflow_summary['revision'] = workflow.revision
-        }
-        workflow_summary['runName']      = workflow.runName
-        if (workflow.containerEngine) {
-            workflow_summary['containerEngine'] = workflow.containerEngine
-        }
-        if (workflow.container) {
-            workflow_summary['container'] = workflow.container
-        }
-        workflow_summary['launchDir']    = workflow.launchDir
-        workflow_summary['workDir']      = workflow.workDir
-        workflow_summary['projectDir']   = workflow.projectDir
-        workflow_summary['userName']     = workflow.userName
-        workflow_summary['profile']      = workflow.profile
-        workflow_summary['configFiles']  = workflow.configFiles.join(', ')
-
-        // Get pipeline parameters defined in JSON Schema
-        def Map params_summary = [:]
-        def blacklist  = ['hostnames']
-        def params_map = paramsLoad("${workflow.projectDir}", schema_filename)
-        for (group in params_map.keySet()) {
-            def sub_params = new LinkedHashMap()
-            def group_params = params_map.get(group)  // This gets the parameters of that particular group
-            for (param in group_params.keySet()) {
-                if (params.containsKey(param) && !blacklist.contains(param)) {
-                    def params_value = params.get(param)
-                    def schema_value = group_params.get(param).default
-                    def param_type   = group_params.get(param).type
-                    if (schema_value != null) {
-                        if (param_type == 'string') {
-                            if (schema_value.contains('$projectDir') || schema_value.contains('${projectDir}')) {
-                                def sub_string = schema_value.replace('\$projectDir', '')
-                                sub_string     = sub_string.replace('\${projectDir}', '')
-                                if (params_value.contains(sub_string)) {
-                                    schema_value = params_value
-                                }
-                            }
-                            if (schema_value.contains('$params.outdir') || schema_value.contains('${params.outdir}')) {
-                                def sub_string = schema_value.replace('\$params.outdir', '')
-                                sub_string     = sub_string.replace('\${params.outdir}', '')
-                                if ("${params.outdir}${sub_string}" == params_value) {
-                                    schema_value = params_value
-                                }
-                            }
-                        }
-                    }
-
-                    // We have a default in the schema, and this isn't it
-                    if (schema_value != null && params_value != schema_value) {
-                        sub_params.put(param, params_value)
-                    }
-                    // No default in the schema, and this isn't empty
-                    else if (schema_value == null && params_value != "" && params_value != null && params_value != false) {
-                        sub_params.put(param, params_value)
-                    }
-                }
-            }
-            params_summary.put(group, sub_params)
-        }
-        return [ 'Core Nextflow options' : workflow_summary ] << params_summary
-    }
-
-    //
-    // Beautify parameters for summary and return as string
-    //
-    public static String paramsSummaryLog(workflow, params, schema_filename) {
-        Map colors = NfcoreTemplate.logColours(params.monochrome_logs)
-        String output  = ''
-        def params_map = paramsSummaryMap(workflow, params, schema_filename=schema_filename)
-        def max_chars  = paramsMaxChars(params_map)
-        for (group in params_map.keySet()) {
-            def group_params = params_map.get(group)  // This gets the parameters of that particular group
-            if (group_params) {
-                output += colors.bold + group + colors.reset + '\n'
-                for (param in group_params.keySet()) {
-                    if (param == 'max_memory') {
-                        if (params.resources.max_memory_adjusted) {
-                            output += "  " + colors.blue + param.padRight(max_chars) + ": " + colors.green +  params.resources.max_memory + colors.reset + " (Original request (" + colors.green + group_params.get(param) + colors.reset + ") adjusted to fit your system)\n"
-                        } else {
-                            output += "  " + colors.blue + param.padRight(max_chars) + ": " + colors.green +  group_params.get(param) + colors.reset + '\n'
-                        }
-                    } else if (param == 'max_cpus') {
-                        if (params.resources.max_cpus_adjusted) {
-                            output += "  " + colors.blue + param.padRight(max_chars) + ": " + colors.green +  params.resources.max_cpus + colors.reset + " (Original request (" + colors.green + group_params.get(param) + colors.reset + ") adjusted to fit your system)\n"
-                        } else {
-                            output += "  " + colors.blue + param.padRight(max_chars) + ": " + colors.green +  group_params.get(param) + colors.reset + '\n'
-                        }
-                    } else {
-                        output += "  " + colors.blue + param.padRight(max_chars) + ": " + colors.green +  group_params.get(param) + colors.reset + '\n'
-                    }
-                }
-                output += '\n'
-            }
-        }
-        output += "!! Only displaying parameters that differ from the pipeline defaults !!\n"
-        output += NfcoreTemplate.dashedLine(params.monochrome_logs)
-        return output
-    }
-
-    //
-    // Loop over nested exceptions and print the causingException
-    //
-    private static void printExceptions(ex_json, params_json, log, enums, limit=5) {
-        def causingExceptions = ex_json['causingExceptions']
-        if (causingExceptions.length() == 0) {
-            def m = ex_json['message'] =~ /required key \[([^\]]+)\] not found/
-            // Missing required param
-            if (m.matches()) {
-                log.error "* Missing required parameter: --${m[0][1]}"
-            }
-            // Other base-level error
-            else if (ex_json['pointerToViolation'] == '#') {
-                log.error "* ${ex_json['message']}"
-            }
-            // Error with specific param
-            else {
-                def param = ex_json['pointerToViolation'] - ~/^#\//
-                def param_val = params_json[param].toString()
-                if (enums.containsKey(param)) {
-                    def error_msg = "* --${param}: '${param_val}' is not a valid choice (Available choices"
-                    if (enums[param].size() > limit) {
-                        log.error "${error_msg} (${limit} of ${enums[param].size()}): ${enums[param][0..limit-1].join(', ')}, ... )"
-                    } else {
-                        log.error "${error_msg}: ${enums[param].join(', ')})"
-                    }
-                } else {
-                    log.error "* --${param}: ${ex_json['message']} (${param_val})"
-                }
-            }
-        }
-        for (ex in causingExceptions) {
-            printExceptions(ex, params_json, log, enums)
-        }
-    }
-    */
-
-    //
-    // Remove an element from a JSONArray
-    //
-    /*
-    private static JSONArray removeElement(json_array, element) {
-        def list = []
-        int len = json_array.length()
-        for (int i=0;i<len;i++){
-            list.add(json_array.get(i).toString())
-        }
-        list.remove(element)
-        JSONArray jsArray = new JSONArray(list)
-        return jsArray
-    }
-    */
-
-    //
-    // Remove ignored parameters
-    //
-    /*
-    private static JSONObject removeIgnoredParams(raw_schema, params) {
-        // Remove anything that's in params.schema_ignore_params
-        params.schema_ignore_params.split(',').each{ ignore_param ->
-            if(raw_schema.keySet().contains('definitions')){
-                raw_schema.definitions.each { definition ->
-                    for (key in definition.keySet()){
-                        if (definition[key].get("properties").keySet().contains(ignore_param)){
-                            // Remove the param to ignore
-                            definition[key].get("properties").remove(ignore_param)
-                            // If the param was required, change this
-                            if (definition[key].has("required")) {
-                                def cleaned_required = removeElement(definition[key].required, ignore_param)
-                                definition[key].put("required", cleaned_required)
-                            }
-                        }
-                    }
-                }
-            }
-            if(raw_schema.keySet().contains('properties') && raw_schema.get('properties').keySet().contains(ignore_param)) {
-                raw_schema.get("properties").remove(ignore_param)
-            }
-            if(raw_schema.keySet().contains('required') && raw_schema.required.contains(ignore_param)) {
-                def cleaned_required = removeElement(raw_schema.required, ignore_param)
-                raw_schema.put("required", cleaned_required)
-            }
-        }
-        return raw_schema
-    }
-    */
-
-
-
-    //
-    // This function tries to read a JSON params file
-    //
-    /*
-    private static LinkedHashMap paramsLoad(String projectdir, ArrayList json_schema) {
-        def params_map = new LinkedHashMap()
-        try {
-            params_map = paramsRead(projectdir, json_schema)
-        } catch (Exception e) {
-            println "Could not read parameters settings from JSON. $e"
-            params_map = new LinkedHashMap()
-        }
-        return params_map
-    }
-    */
-
-    //
-    // Method to actually read in JSON file using Groovy.
-    // Group (as Key), values are all parameters
-    //    - Parameter1 as Key, Description as Value
-    //    - Parameter2 as Key, Description as Value
-    //    ....
-    // Group
-    //    -
-    /*
-    private static LinkedHashMap paramsRead(String projectdir, ArrayList json_schema) throws Exception {
-         def Map schema_definitions = [:]
-         def Map schema_properties = [:]
-
-        for (schema in json_schema) {
-            def json = new File(getSchemaPath(projectdir, schema)).text
-            schema_definitions += (Map) new JsonSlurper().parseText(json).get('definitions')
-            //schema_properties += (Map) new JsonSlurper().parseText(json).get('properties')
-        }
-        /* Tree looks like this in nf-core schema
-        * definitions <- this is what the first get('definitions') gets us
-                group 1
-                    title
-                    description
-                        properties
-                        parameter 1
-                            type
-                            description
-                        parameter 2
-                            type
-                            description
-                group 2
-                    title
-                    description
-                        properties
-                        parameter 1
-                            type
-                            description
-        * properties <- parameters can also be ungrouped, outside of definitions
-                parameter 1
-                    type
-                    description
-        */
-    /*
-        // Grouped params
-        def params_map = new LinkedHashMap()
-        schema_definitions.each { key, val ->
-            def Map group = schema_definitions."$key".properties // Gets the property object of the group
-            def title = schema_definitions."$key".title
-            def sub_params = new LinkedHashMap()
-            group.each { innerkey, value ->
-                sub_params.put(innerkey, value)
-            }
-            params_map.put(title, sub_params)
-        }
-
-        // Ungrouped params
-        def ungrouped_params = new LinkedHashMap()
-        schema_properties.each { innerkey, value ->
-            ungrouped_params.put(innerkey, value)
-        }
-        params_map.put("Other parameters", ungrouped_params)
-
-        return params_map
-    }
-
-    //
-    // Get maximum number of characters across all parameter names
-    //
-    private static Integer paramsMaxChars(params_map) {
-        Integer max_chars = 0
-        for (group in params_map.keySet()) {
-            def group_params = params_map.get(group)  // This gets the parameters of that particular group
-            for (param in group_params.keySet()) {
-                if (param.size() > max_chars) {
-                    max_chars = param.size()
-                }
-            }
-        }
-        return max_chars
-    }
-    */
 }
