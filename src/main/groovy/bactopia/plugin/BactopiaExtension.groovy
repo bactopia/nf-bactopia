@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.bactopia
+package bactopia.plugin
 
 import groovy.json.JsonBuilder
 import org.json.JSONObject
@@ -29,15 +29,15 @@ import nextflow.plugin.extension.PluginExtensionPoint
 import nextflow.script.WorkflowMetadata
 import nextflow.Session
 
-import nextflow.bactopia.BactopiaConfig
-import nextflow.bactopia.BactopiaSchema
-import nextflow.bactopia.nfschema.SummaryCreator
+import bactopia.plugin.BactopiaConfig
+import bactopia.plugin.BactopiaSchema
+import bactopia.plugin.nfschema.SummaryCreator
 
-import static nextflow.bactopia.inputs.BactopiaTools.collectInputs
-import static nextflow.bactopia.BactopiaTemplate.getLogColors
-import static nextflow.bactopia.BactopiaTemplate.getLogo
-import static nextflow.bactopia.BactopiaTemplate.getWorkflowSummary
-import static nextflow.bactopia.nfschema.Common.getLongestKeyLength
+import static bactopia.plugin.inputs.BactopiaTools.collectInputs
+import static bactopia.plugin.BactopiaTemplate.getLogColors
+import static bactopia.plugin.BactopiaTemplate.getLogo
+import static bactopia.plugin.BactopiaTemplate.getWorkflowSummary
+import static bactopia.plugin.nfschema.Common.getLongestKeyLength
 
 /**
  * Example plugin extension showing how to implement a basic

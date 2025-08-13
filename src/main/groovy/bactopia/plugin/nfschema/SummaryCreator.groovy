@@ -2,7 +2,7 @@
 // Sourced and modified from nf-schema
 // Original Code: https://github.com/nextflow-io/nf-schema/blob/master/src/main/groovy/nextflow/validation/summary/SummaryCreator.groovy
 //
-package nextflow.bactopia.nfschema
+package bactopia.plugin.nfschema
 
 import groovy.util.logging.Slf4j
 import java.nio.file.Files
@@ -10,9 +10,9 @@ import java.nio.file.Path
 import nextflow.Nextflow
 import nextflow.script.WorkflowMetadata
 
-import nextflow.bactopia.BactopiaConfig
-import static nextflow.bactopia.nfschema.Files.paramsLoad
-import static nextflow.bactopia.nfschema.Common.getBasePath
+import bactopia.plugin.BactopiaConfig
+import static bactopia.plugin.nfschema.Files.paramsLoad
+import static bactopia.plugin.nfschema.Common.getBasePath
 
 /**
  * @author : Robert Petit <robbie.petit@gmail.com>

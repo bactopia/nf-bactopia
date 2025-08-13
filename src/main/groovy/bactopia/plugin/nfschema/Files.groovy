@@ -2,7 +2,7 @@
 // Sourced and modified from nf-schema
 // Original Code: https://github.com/nextflow-io/nf-schema/blob/master/src/main/groovy/nextflow/validation/utils/Files.groovy
 //
-package nextflow.bactopia.nfschema
+package bactopia.plugin.nfschema
 
 import org.yaml.snakeyaml.Yaml
 import org.json.JSONArray
@@ -15,8 +15,8 @@ import groovy.util.logging.Slf4j
 import java.nio.file.Path
 
 import nextflow.exception.AbortOperationException
-import static nextflow.bactopia.nfschema.Common.getValueFromJsonPointer
-import static nextflow.bactopia.nfschema.Types.inferType
+import static bactopia.plugin.nfschema.Common.getValueFromJsonPointer
+import static bactopia.plugin.nfschema.Types.inferType
 
 /**
  * A collection of functions used to get data from files

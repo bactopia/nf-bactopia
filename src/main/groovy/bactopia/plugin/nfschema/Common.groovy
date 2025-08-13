@@ -2,7 +2,7 @@
 // Sourced and modified from nf-schema
 // Original Code: https://github.com/nextflow-io/nf-schema/blob/master/src/main/groovy/nextflow/validation/utils/Common.groovy
 //
-package nextflow.bactopia.nfschema
+package bactopia.plugin.nfschema
 
 import org.json.JSONObject
 import org.json.JSONArray

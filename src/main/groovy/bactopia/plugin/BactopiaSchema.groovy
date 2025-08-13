@@ -4,7 +4,7 @@
 //
 // This is based on the original NF-Core template (the OG 'libs' folder) and the nf-validation
 // plugin (which you should probably be using instead of this file).
-package nextflow.bactopia
+package bactopia.plugin
 
 import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
@@ -28,16 +28,16 @@ import nextflow.Nextflow
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 
-import nextflow.bactopia.BactopiaConfig
-import nextflow.bactopia.nfschema.JsonSchemaValidator
+import bactopia.plugin.BactopiaConfig
+import bactopia.plugin.nfschema.JsonSchemaValidator
 
-import static nextflow.bactopia.nfschema.Common.getBasePath
-import static nextflow.bactopia.BactopiaUtils.isLocal
-import static nextflow.bactopia.BactopiaUtils.isPositiveInteger
-import static nextflow.bactopia.BactopiaUtils.fileNotFound
-import static nextflow.bactopia.BactopiaUtils.fileNotGzipped
-import static nextflow.bactopia.BactopiaTemplate.getLogColors
-import static nextflow.bactopia.BactopiaTemplate.logError
+import static bactopia.plugin.nfschema.Common.getBasePath
+import static bactopia.plugin.BactopiaUtils.isLocal
+import static bactopia.plugin.BactopiaUtils.isPositiveInteger
+import static bactopia.plugin.BactopiaUtils.fileNotFound
+import static bactopia.plugin.BactopiaUtils.fileNotGzipped
+import static bactopia.plugin.BactopiaTemplate.getLogColors
+import static bactopia.plugin.BactopiaTemplate.logError
 
 @Slf4j
 class BactopiaSchema {

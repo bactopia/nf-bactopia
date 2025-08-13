@@ -2,7 +2,7 @@
 // Sourced and modified from nf-schema
 // Original Code: https://github.com/nextflow-io/nf-schema/blob/master/src/main/groovy/nextflow/validation/validators/JsonSchemaValidator.groovy
 //
-package nextflow.bactopia.nfschema
+package bactopia.plugin.nfschema
 
 import groovy.util.logging.Slf4j
 import org.json.JSONObject
@@ -17,11 +17,11 @@ import dev.harrel.jsonschema.providers.OrgJsonNode
 import java.util.regex.Pattern
 import java.util.regex.Matcher
 
-import static nextflow.bactopia.nfschema.Common.getValueFromJsonPointer
-import static nextflow.bactopia.nfschema.Common.findAllKeys
-import static nextflow.bactopia.nfschema.Common.kebabToCamel
-import static nextflow.bactopia.nfschema.Types.isInteger
-import nextflow.bactopia.BactopiaConfig
+import static bactopia.plugin.nfschema.Common.getValueFromJsonPointer
+import static bactopia.plugin.nfschema.Common.findAllKeys
+import static bactopia.plugin.nfschema.Common.kebabToCamel
+import static bactopia.plugin.nfschema.Types.isInteger
+import bactopia.plugin.BactopiaConfig
 /**
  * @author : Robert Petit <robbie.petit@gmail.com>
  * @author : nvnieuwk <nicolas.vannieuwkerke@ugent.be>

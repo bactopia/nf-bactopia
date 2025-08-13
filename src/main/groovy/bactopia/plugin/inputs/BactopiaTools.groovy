@@ -1,9 +1,9 @@
-package nextflow.bactopia.inputs
+package bactopia.plugin.inputs
 
 import groovy.util.logging.Slf4j
 import java.nio.file.Path
 
-import static nextflow.bactopia.BactopiaUtils.fileExists
+import static bactopia.plugin.BactopiaUtils.fileExists
 
 @Slf4j
 class BactopiaTools {

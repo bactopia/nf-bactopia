@@ -1,8 +1,8 @@
-package nextflow.bactopia
+package bactopia.plugin
 
 import groovy.util.logging.Slf4j
 
-import static nextflow.bactopia.BactopiaTemplate.getLogColors
+import static bactopia.plugin.BactopiaTemplate.getLogColors
 
 @Slf4j
 class BactopiaMotD {

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.bactopia
+package bactopia.plugin
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -23,9 +23,9 @@ import java.nio.file.Paths
 import nextflow.Session
 import nextflow.trace.TraceObserver
 
-import nextflow.bactopia.BactopiaConfig
-import nextflow.bactopia.nfschema.HelpMessageCreator
-import static nextflow.bactopia.BactopiaMotD.getMotD
+import bactopia.plugin.BactopiaConfig
+import bactopia.plugin.nfschema.HelpMessageCreator
+import static bactopia.plugin.BactopiaMotD.getMotD
 
 /**
  * Bactopia workflow observer

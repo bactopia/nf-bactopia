@@ -1,4 +1,4 @@
-package nextflow.bactopia
+package bactopia.plugin
 
 import groovy.util.logging.Slf4j
 

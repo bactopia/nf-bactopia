@@ -2,7 +2,7 @@
 // Sourced and modified from nf-schema
 // Original Code: https://github.com/nextflow-io/nf-schema/blob/master/src/main/groovy/nextflow/validation/exceptions/SchemaValidationException.groovy
 //
-package nextflow.bactopia.nfschema
+package bactopia.plugin.nfschema
 
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException

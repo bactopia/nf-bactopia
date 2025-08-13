@@ -3,7 +3,7 @@
 //
 // This is based on the original NF-Core template (the OG 'libs' folder) and the nf-validation
 // plugin (which you should probably be using instead of this file).
-package nextflow.bactopia
+package bactopia.plugin
 
 import groovy.util.logging.Slf4j
 

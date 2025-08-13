@@ -2,7 +2,7 @@
 // This file holds several Groovy functions that could be useful for any Nextflow pipeline
 //
 // Modified from NF-Core's template: https://github.com/nf-core/tools
-package nextflow.bactopia
+package bactopia.plugin
 
 import groovy.util.logging.Slf4j
 import java.io.RandomAccessFile
@@ -12,7 +12,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.yaml.snakeyaml.Yaml
 
-import static nextflow.bactopia.BactopiaTemplate.logError
+import static bactopia.plugin.BactopiaTemplate.logError
 
 @Slf4j
 class BactopiaUtils {

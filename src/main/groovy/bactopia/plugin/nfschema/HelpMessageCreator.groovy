@@ -2,7 +2,7 @@
 // Sourced and modified from nf-schema
 // Original Code: https://github.com/nextflow-io/nf-schema/blob/master/src/main/groovy/nextflow/validation/help/HelpMessageCreator.groovy
 //
-package nextflow.bactopia.nfschema
+package bactopia.plugin.nfschema
 
 import groovy.util.logging.Slf4j
 
@@ -10,18 +10,18 @@ import java.nio.file.Path
 
 import nextflow.Session
 
-import nextflow.bactopia.BactopiaConfig
+import bactopia.plugin.BactopiaConfig
 
 
-import static nextflow.bactopia.BactopiaMotD.getMotD
-import static nextflow.bactopia.BactopiaTemplate.dashedLine
-import static nextflow.bactopia.BactopiaTemplate.getLogColors
-import static nextflow.bactopia.BactopiaTemplate.getLogo
+import static bactopia.plugin.BactopiaMotD.getMotD
+import static bactopia.plugin.BactopiaTemplate.dashedLine
+import static bactopia.plugin.BactopiaTemplate.getLogColors
+import static bactopia.plugin.BactopiaTemplate.getLogo
 
-import static nextflow.bactopia.nfschema.Common.getBasePath
-import static nextflow.bactopia.nfschema.Common.longestStringLength
-import static nextflow.bactopia.nfschema.Common.getLongestKeyLength
-import static nextflow.bactopia.nfschema.Files.paramsLoad
+import static bactopia.plugin.nfschema.Common.getBasePath
+import static bactopia.plugin.nfschema.Common.longestStringLength
+import static bactopia.plugin.nfschema.Common.getLongestKeyLength
+import static bactopia.plugin.nfschema.Files.paramsLoad
 
 /**
  * This class contains methods to write a help message
