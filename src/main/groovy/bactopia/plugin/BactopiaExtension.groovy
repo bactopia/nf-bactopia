@@ -31,6 +31,7 @@ import nextflow.Session
 
 import bactopia.plugin.BactopiaConfig
 import bactopia.plugin.BactopiaSchema
+import bactopia.plugin.nfschema.HelpMessageCreator
 import bactopia.plugin.nfschema.SummaryCreator
 
 import static bactopia.plugin.inputs.BactopiaTools.collectInputs
@@ -78,6 +79,27 @@ class BactopiaExtension extends PluginExtensionPoint {
 
 
     //
+    // Groovy Map of the help message
+    //
+    @Function
+    public String paramsHelp() {
+        def Map params = session.params
+        def String help = ""
+        def HelpMessageCreator helpCreator = new HelpMessageCreator(config, session, params["help_all"])
+        help += helpCreator.getBeforeText(session, (String) params["workflow"]["name"], (String) params["workflow"]["description"])
+        if (params["help_all"]) {
+            log.debug("Printing out the full help message")
+            help += helpCreator.getFullMessage()
+        } else if (params["help"]) {
+            log.debug("Printing out the short help message")
+            def paramValue = null
+            help += helpCreator.getShortMessage(paramValue instanceof String ? paramValue : "")
+        }
+        help += helpCreator.getAfterText()
+        return help
+    }
+
+    //
     // Groovy Map summarising parameters/workflow options used by the pipeline
     //
     @Function
@@ -102,7 +124,6 @@ class BactopiaExtension extends PluginExtensionPoint {
         Map options = null,
         WorkflowMetadata workflow
     ) {
-
         def Map params = session.params
         def String schemaFilename = options?.containsKey('parameters_schema') ? options.parameters_schema as String : config.parametersSchema
 

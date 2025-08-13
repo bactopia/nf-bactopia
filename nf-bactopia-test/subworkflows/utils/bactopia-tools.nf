@@ -11,7 +11,6 @@ include { bactopiaToolInputs } from 'plugin/nf-bactopia'
 include { paramsSummaryLog   } from 'plugin/nf-bactopia'
 include { validateParameters } from 'plugin/nf-bactopia'
 
-
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Subworkflow to initialize the Bactopia Tools
@@ -27,7 +26,6 @@ workflow BACTOPIATOOL_INIT {
     exclude_path
 
     main:
-    // Handle parameters
     log.info paramsSummaryLog(workflow)
     validateParameters(null, true)
 

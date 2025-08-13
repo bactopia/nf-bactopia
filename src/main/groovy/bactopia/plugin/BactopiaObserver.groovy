@@ -23,8 +23,6 @@ import java.nio.file.Paths
 import nextflow.Session
 import nextflow.trace.TraceObserver
 
-import bactopia.plugin.BactopiaConfig
-import bactopia.plugin.nfschema.HelpMessageCreator
 import static bactopia.plugin.BactopiaMotD.getMotD
 
 /**
@@ -34,31 +32,10 @@ import static bactopia.plugin.BactopiaMotD.getMotD
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@CompileStatic
 class BactopiaObserver implements TraceObserver {
 
     @Override
-    void onFlowCreate(Session session) {
-        // Help message logic
-        def Map params = (Map)session.params ?: [:]
-        def BactopiaConfig config = new BactopiaConfig(session?.config?.navigate('bactopia') as Map, params)
-        if (params["help"] || params["help_all"]) {
-            def String help = ""
-            def HelpMessageCreator helpCreator = new HelpMessageCreator(config, session, params["help_all"])
-            help += helpCreator.getBeforeText(session, (String) params["workflow"]["name"], (String) params["workflow"]["description"])
-            if (params["help_all"]) {
-                log.debug("Printing out the full help message")
-                help += helpCreator.getFullMessage()
-            } else if (params["help"]) {
-                log.debug("Printing out the short help message")
-                def paramValue = null
-                help += helpCreator.getShortMessage(paramValue instanceof String ? paramValue : "")
-            }
-            help += helpCreator.getAfterText()
-            log.info(help)
-            System.exit(0)
-        }
-    }
+    void onFlowCreate(Session session) {}
 
     @Override
     void onFlowComplete() {
