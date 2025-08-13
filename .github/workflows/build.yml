@@ -1,4 +1,4 @@
-name: nf-hello CI
+name: nf-bactopia CI
 on:
   push:
     branches:
@@ -10,37 +10,45 @@ on:
       - '*'
 jobs:
   build:
-    name: Build nf-hello
+    name: Build nf-bactopia
     if: "!contains(github.event.head_commit.message, '[ci skip]')"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        java_version: [17, 21]
+        java_version: [17]
+        nextflow_version: ['25.04']
 
     steps:
       - name: Environment
         run: env | sort
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v1
         with:
           fetch-depth: 1
           submodules: true
 
       - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v1
         with:
           java-version: ${{matrix.java_version}}
           architecture: x64
           distribution: 'temurin'
 
-      - name: Compile
-        run: ./gradlew assemble
-
-      - name: Tests
-        run: ./gradlew check
+      - name: Unit tests
+        run: make test
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
 
+      - name: Setup Nextflow ${{ matrix.nextflow_version }}
+        uses: nf-core/setup-nextflow@b9f764e8ba5c76b712ace14ecbfcef0e40ae2dd8 # v1
+        with:
+          version: "${{ matrix.nextflow_version }}"
+
+      - name: Install
+        run: make install
+
+      - name: Test
+        run: nextflow run nf-bactopia-test/ -plugins nf-bactopia@0.1.0
