@@ -1,0 +1,30 @@
+plugins {
+    id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha4'
+}
+
+version = '0.1.0'
+
+dependencies {
+    // add here plugins dependencies
+    implementation 'org.json:json:20240303'
+    implementation 'dev.harrel:json-schema:1.5.0'
+    implementation 'com.sanctionco.jmail:jmail:1.6.3' // Needed for e-mail format validation
+}
+
+nextflowPlugin {
+    nextflowVersion = '24.10.0'
+
+    provider = 'bactopia'
+    className = 'bactopia.plugin.BactopiaPlugin'
+    extensionPoints = [
+        'bactopia.plugin.BactopiaExtension',
+        'bactopia.plugin.BactopiaFactory'
+    ]
+
+    publishing {
+        registry {
+            url = 'https://nf-plugins-registry.dev-tower.net/api'
+            authToken = project.findProperty('pluginRegistry.accessToken')
+        }
+    }
+}
