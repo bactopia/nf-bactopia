@@ -31,14 +31,18 @@ conda create -y -n nf-bactopia \
 conda activate nf-bactopia
 ```
 
-### Build the plugin
+### Build the plugin and install
 
 ```{bash}
 make assemble
+make install
 ```
 
 ### Use the plugin
 
+The `make install` should put the plugin in your `~/.nextflow/plugins` directory. So it should
+just work!
+
 ```{bash}
-NXF_VER=25.06.0-edge NXF_PLUGINS_DIR=/path/to/build/plugins nextflow run ...
+NXF_VER=25.06.0-edge nextflow run ...
 ```
