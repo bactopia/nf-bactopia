@@ -7,6 +7,8 @@ package bactopia.plugin
 
 import groovy.util.logging.Slf4j
 
+import static bactopia.plugin.BactopiaMotD.getMotD
+
 @Slf4j
 class BactopiaTemplate {
 
@@ -21,16 +23,17 @@ class BactopiaTemplate {
                 params.hostnames.each { prof, hnames ->
                     hnames.each { hname ->
                         if (hostname.contains(hname) && !workflow.profile.contains(prof)) {
-                            log.info "=${colors.yellow}====================================================${colors.reset}=\n" +
+                            log.info("=${colors.yellow}====================================================${colors.reset}=\n" +
                                 "${colors.yellow}WARN: You are running with `-profile $workflow.profile`\n" +
                                 "      but your machine hostname is ${colors.white}'$hostname'${colors.reset}.\n" +
                                 "      ${colors.yellow_bold}Please use `-profile $prof${colors.reset}`\n" +
                                 "=${colors.yellow}====================================================${colors.reset}="
+                            )
                         }
                     }
                 }
             } catch (Exception e) {
-                log.warn "[$workflow.manifest.name] Could not determine 'hostname' - skipping check. Reason: ${e.message}."
+                log.warn("[$workflow.manifest.name] Could not determine 'hostname' - skipping check. Reason: ${e.message}.")
             }
         }
     }
@@ -83,14 +86,14 @@ class BactopiaTemplate {
                 mqc_report = multiqc_report.getVal()
                 if (mqc_report.getClass() == ArrayList && mqc_report.size() >= 1) {
                     if (mqc_report.size() > 1) {
-                        log.warn "[$workflow.manifest.name] Found multiple reports from process 'MULTIQC', will use only one"
+                        log.warn("[$workflow.manifest.name] Found multiple reports from process 'MULTIQC', will use only one")
                     }
                     mqc_report = mqc_report[0]
                 }
             }
         } catch (all) {
             if (multiqc_report) {
-                log.warn "[$workflow.manifest.name] Could not attach MultiQC report to summary email"
+                log.warn("[$workflow.manifest.name] Could not attach MultiQC report to summary email")
             }
         }
 
@@ -125,7 +128,7 @@ class BactopiaTemplate {
                 if (params.plaintext_email) { throw GroovyException('Send plaintext e-mail, not HTML') }
                 // Try to send HTML e-mail using sendmail
                 [ 'sendmail', '-t' ].execute() << sendmail_html
-                log.info "-${colors.purple}[$workflow.manifest.name]${colors.green} Sent summary e-mail to $email_address (sendmail)-"
+                log.info("-${colors.purple}[$workflow.manifest.name]${colors.green} Sent summary e-mail to $email_address (sendmail)-")
             } catch (all) {
                 // Catch failures and try with plaintext
                 def mail_cmd = [ 'mail', '-s', subject, '--content-type=text/html', email_address ]
@@ -133,7 +136,7 @@ class BactopiaTemplate {
                     mail_cmd += [ '-A', mqc_report ]
                 }
                 mail_cmd.execute() << email_html
-                log.info "-${colors.purple}[$workflow.manifest.name]${colors.green} Sent summary e-mail to $email_address (mail)-"
+                log.info("-${colors.purple}[$workflow.manifest.name]${colors.green} Sent summary e-mail to $email_address (mail)-")
             }
         }
 
@@ -155,13 +158,13 @@ class BactopiaTemplate {
         Map colors = logColours(params.monochrome_logs)
         if (workflow.success) {
             if (workflow.stats.ignoredCount == 0) {
-                log.info "-${colors.purple}[$workflow.manifest.name]${colors.green} Pipeline completed successfully${colors.reset}-"
+                log.info("-${colors.purple}[$workflow.manifest.name]${colors.green} Pipeline completed successfully${colors.reset}-")
             } else {
-                log.info "-${colors.purple}[$workflow.manifest.name]${colors.red} Pipeline completed successfully, but with errored process(es) ${colors.reset}-"
+                log.info("-${colors.purple}[$workflow.manifest.name]${colors.red} Pipeline completed successfully, but with errored process(es) ${colors.reset}-")
             }
         } else {
             hostName(workflow, params, log)
-            log.info "-${colors.purple}[$workflow.manifest.name]${colors.red} Pipeline completed with errors${colors.reset}-"
+            log.info("-${colors.purple}[$workflow.manifest.name]${colors.red} Pipeline completed with errors${colors.reset}-")
         }
     }
 
@@ -175,6 +178,7 @@ class BactopiaTemplate {
         colorcodes['reset']      = monochrome_logs ? '' : "\033[0m"
         colorcodes['bold']       = monochrome_logs ? '' : "\033[1m"
         colorcodes['dim']        = monochrome_logs ? '' : "\033[2m"
+        colorcodes['italic']     = monochrome_logs ? '' : "\033[3m"
         colorcodes['underlined'] = monochrome_logs ? '' : "\033[4m"
         colorcodes['blink']      = monochrome_logs ? '' : "\033[5m"
         colorcodes['reverse']    = monochrome_logs ? '' : "\033[7m"
@@ -233,17 +237,10 @@ class BactopiaTemplate {
         return colorcodes
     }
 
-    // Logs error message disguised as a info
-    public static void logError(message) {
-        Map colors = this.getLogColors(false)
-        log.info "${colors.red}$message${colors.reset}"
-    }
-
-
     //
     // Prints a dashed line, some might even call it 'fancy'
     //
-    public static String dashedLine(monochrome_logs) {
+    public static String dashedLine(monochrome_logs = false) {
         Map colors = this.getLogColors(monochrome_logs)
         return "-${colors.dim}------------------------------------------------------------------${colors.reset}-"
     }
@@ -365,24 +362,22 @@ class BactopiaTemplate {
 
     public static String getWorkflowSummary(workflow, params, manifest_version, monochrome_logs) {
         Map colors = getLogColors(monochrome_logs)
-        def output = "\n"
-
+        def output = "\n" + dashedLine(monochrome_logs) + "\n\n"
         if (params.workflow.name == "bactopia") {
-            output += "Bactopia Execution Summary"
+            output += "${colors.bold}Bactopia Execution Summary${colors.reset}"
         } else if (params.workflow.name == "staphopia") {
-            output += "Staphopia Execution Summary"
+            output += "${colors.bold}Staphopia Execution Summary${colors.reset}"
         } else if (params.workflow.name == "enteropia") {
-            output += "Enteropia Execution Summary"
+            output += "${colors.bold}Enteropia Execution Summary${colors.reset}"
         } else if (params.workflow.name == "cleanyerreads") {
-            output += "Clean-yer-reads Execution Summary"
+            output += "${colors.bold}Clean-yer-reads Execution Summary${colors.reset}"
         } else if (params.workflow.name == "teton") {
-            output += "Teton Execution Summary\n"
+            output += "${colors.bold}Teton Execution Summary${colors.reset}"
         } else {
-            output += "Bactopia Tool Execution Summary"
+            output += "${colors.bold}Bactopia Tool Execution Summary${colors.reset}"
         }
-
         output += """
-            ------------------------------
+            -${colors.dim}-----------------------------${colors.reset}-
             Workflow         : ${params.workflow.name}
             Bactopia Version : ${manifest_version}
             Nextflow Version : ${workflow.nextflow.version}
@@ -392,42 +387,52 @@ class BactopiaTemplate {
             Completed At     : ${workflow.complete}
             Duration         : ${workflow.duration}
             Resumed          : ${workflow.resume}
-            Success          : ${workflow.success}
-            ${colors.bgreen}Merged Results${colors.reset}   : ${colors.green}${params.outdir}/${params.rundir}${colors.reset}
             """.stripIndent()
-        
 
-        if (params.workflow.name == "bactopia" || params.workflow.name == "staphopia") {
+        if (workflow.success) {
+            output += "Success          : ${workflow.success}\n"
+            output += "${colors.bgreen}Merged Results${colors.reset}   : ${colors.green}${params.outdir}/${params.rundir}${colors.reset}\n\n"
+
+            if (params.workflow.name == "bactopia" || params.workflow.name == "staphopia") {
+                output += """
+                    ${colors.bold}Further analyze your samples using Bactopia Tools, with the following command:${colors.reset}
+                    -${colors.dim}------------------------------------------------------------------------------${colors.reset}-
+                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf <REPLACE_WITH_BACTOPIA_TOOL_NAME>${colors.reset}
+
+                    Examples:
+                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf pangenome${colors.reset}
+                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf merlin${colors.reset}
+                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf sccmec${colors.reset}
+
+                    See the full list of available Bactopia Tools: ${colors.cyan}bactopia --list_wfs${colors.reset}
+                """.stripIndent()
+            } else if (params.workflow.name == "teton") {
+                output += """
+                    ${colors.bold}Further analyze bacterial samples using Bactopia, with the following command:${colors.reset}
+                    -${colors.dim}------------------------------------------------------------------------------${colors.reset}-
+                    ${colors.cyan}bactopia -profile ${workflow.profile} --samples ${params.outdir}/bactopia-runs/${params.rundir}/merged-results/teton-prepare.tsv${colors.reset}
+                """.stripIndent()
+            } else if (params.workflow.name == "cleanyerreads") {
+                output += """
+                    ${colors.bold}Further analyze your samples using Bactopia Tools, with the following command:${colors.reset}
+                    -${colors.dim}------------------------------------------------------------------------------${colors.reset}-
+                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf <REPLACE_WITH_BACTOPIA_TOOL_NAME>${colors.reset}
+
+                    Examples:
+                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf bracken${colors.reset}
+                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf kraken2${colors.reset}
+
+                    See the full list of available Bactopia Tools: ${colors.cyan}bactopia --list_wfs${colors.reset}
+                """.stripIndent()
+            }
+
             output += """
-                Further analyze your samples using Bactopia Tools, with the following command:
-                --------------------------------------------------------------------------------
-                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf <REPLACE_WITH_BACTOPIA_TOOL_NAME>${colors.reset}
-
-                Examples:
-                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf pangenome${colors.reset}
-                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf merlin${colors.reset}
-                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf sccmec${colors.reset}
-
-                See the full list of available Bactopia Tools: ${colors.cyan}bactopia --list_wfs${colors.reset}
+                ${colors.bold}Message of the Day${colors.reset}
+                -${colors.dim}-----------------------------${colors.reset}-
+                ${getMotD(monochrome_logs)}
             """.stripIndent()
-        } else if (params.workflow.name == "teton") {
-            output += """
-                Further analyze bacterial samples using Bactopia, with the following command:
-                --------------------------------------------------------------------------------
-                ${colors.cyan}bactopia -profile ${workflow.profile} --samples ${params.outdir}/bactopia-runs/${params.rundir}/merged-results/teton-prepare.tsv${colors.reset}
-            """.stripIndent()
-        } else if (params.workflow.name == "cleanyerreads") {
-            output += """
-                Further analyze your samples using Bactopia Tools, with the following command:
-                --------------------------------------------------------------------------------
-                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf <REPLACE_WITH_BACTOPIA_TOOL_NAME>${colors.reset}
-
-                Examples:
-                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf bracken${colors.reset}
-                ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf kraken2${colors.reset}
-
-                See the full list of available Bactopia Tools: ${colors.cyan}bactopia --list_wfs${colors.reset}
-            """.stripIndent()
+        } else {
+            output += "Success          : ${colors.red}${workflow.success}${colors.reset}"
         }
 
         return output

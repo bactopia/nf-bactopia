@@ -12,12 +12,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.yaml.snakeyaml.Yaml
 
-import static bactopia.plugin.BactopiaTemplate.logError
-
 @Slf4j
 class BactopiaUtils {
-
-
     //
     // When running with -profile conda, warn if channels have not been set-up appropriately
     //
@@ -28,7 +24,7 @@ class BactopiaUtils {
             def config = parser.load("conda config --show channels".execute().text)
             channels = config.channels
         } catch(NullPointerException | IOException e) {
-            log.warn "Could not verify conda channel configuration."
+            log.warn("Could not verify conda channel configuration.")
             return
         }
 
@@ -41,12 +37,14 @@ class BactopiaUtils {
         conda_check_failed |= !(channels.indexOf('bioconda') < channels.indexOf('defaults'))
 
         if (conda_check_failed) {
-            log.warn "=============================================================================\n" +
+            log.warn(
+                "=============================================================================\n" +
                 "  There is a problem with your Conda configuration!\n\n" +
                 "  You will need to set-up the conda-forge and bioconda channels correctly.\n" +
                 "  Please refer to https://bioconda.github.io/user/install.html#set-up-channels\n" +
                 "  NB: The order of the channels matters!\n" +
                 "==================================================================================="
+            )
         }
     }
 
@@ -66,15 +64,15 @@ class BactopiaUtils {
         def error = 0
         if (value.getClass() == Integer) {
             if (value < 0) {
-                log.error '* --'+ name +': "' + value + '" is not a positive integer.'
+                log.error('* --'+ name +': "' + value + '" is not a positive integer.')
                 error = 1
             }
         } else {
             if (!value.isInteger()) {
-                log.error '* --'+ name +': "' + value + '" is not numeric.'
+                log.error('* --'+ name +': "' + value + '" is not numeric.')
                 error = 1
             } else if (value as Integer < 0) {
-                log.error '* --'+ name +': "' + value + '" is not a positive integer.'
+                log.error('* --'+ name +': "' + value + '" is not a positive integer.')
                 error = 1
             }
         }
@@ -110,7 +108,7 @@ class BactopiaUtils {
     //
     public static Integer fileNotFound(filename, parameter) {
         if (!fileExists(filename)) {
-            logError('* --'+ parameter +': Unable to find "' + filename + '", please verify it exists.'.trim())
+            log.error('* --'+ parameter +': Unable to find "' + filename + '", please verify it exists.'.trim())
             return 1
         }
         return 0

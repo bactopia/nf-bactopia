@@ -21,7 +21,7 @@ import groovy.util.logging.Slf4j
 import java.nio.file.Path
 import java.nio.file.Paths
 import nextflow.Session
-import nextflow.trace.TraceObserver
+import nextflow.trace.TraceObserverV2
 
 import static bactopia.plugin.BactopiaMotD.getMotD
 
@@ -32,15 +32,13 @@ import static bactopia.plugin.BactopiaMotD.getMotD
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class BactopiaObserver implements TraceObserver {
+class BactopiaObserver implements TraceObserverV2 {
 
     @Override
     void onFlowCreate(Session session) {}
 
     @Override
-    void onFlowComplete() {
-        log.info getMotD(false)
-    }
+    void onFlowComplete() {}
 
     void onWorkflowPublish(String name, Object value) {}
     void onFilePublish(Path destination, Path source, Map annotations) {}

@@ -12,8 +12,6 @@ import nextflow.Session
 
 import bactopia.plugin.BactopiaConfig
 
-
-import static bactopia.plugin.BactopiaMotD.getMotD
 import static bactopia.plugin.BactopiaTemplate.dashedLine
 import static bactopia.plugin.BactopiaTemplate.getLogColors
 import static bactopia.plugin.BactopiaTemplate.getLogo
@@ -93,12 +91,8 @@ class HelpMessageCreator {
     public String getAfterText() {
         def String afterText = ""
         if (hiddenParametersCount > 0) {
-            afterText += " ${colors.dim}!! Hiding ${hiddenParametersCount} param(s), use the `--help_all` parameter to show them !!${colors.reset}\n"
+            afterText += " !!${colors.dim} Hiding ${hiddenParametersCount} param(s), use `--help_all` to show them${colors.reset} !!"
         }
-        afterText += dashedLine(config.monochromeLogs)
-        afterText += "\n"
-        afterText += "\n"
-        afterText += getMotD(config.monochromeLogs)
         afterText += "\n"
         return afterText
     }

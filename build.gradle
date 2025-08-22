@@ -9,10 +9,10 @@ dependencies {
     implementation 'com.sanctionco.jmail:jmail:1.6.3' // Needed for e-mail format validation
 }
 
-version = '0.1.0'
+version = '1.0.0'
 
 nextflowPlugin {
-    nextflowVersion = '24.10.0'
+    nextflowVersion = '25.04.0'
 
     provider = 'bactopia'
     className = 'bactopia.plugin.BactopiaPlugin'

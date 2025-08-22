@@ -2,6 +2,11 @@ package bactopia.plugin
 
 import groovy.util.logging.Slf4j
 
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
+
 /**
  * This class allows model an specific configuration, extracting values from a map and converting
  *
@@ -11,7 +16,11 @@ import groovy.util.logging.Slf4j
  */
 
 @Slf4j
-class BactopiaConfig {
+@ScopeName('bactopia')
+@Description('''
+    The `bactopia` scope allows you to configure the `nf-bactopia` plugin.
+''')
+class BactopiaConfig  implements ConfigScope  {
 
     final public Boolean monochromeLogs = false
 
@@ -27,7 +36,7 @@ class BactopiaConfig {
                 monochromeLogs = config.monochromeLogs
                 log.debug("Set `bactopia.monochromeLogs` to ${monochromeLogs}")
             } else {
-                log.warn("Incorrect value detected for `bactopia.monochromeLogs`, a boolean is expected. Defaulting to `${monochromeLogs}`")
+                logWarn("Incorrect value detected for `bactopia.monochromeLogs`, a boolean is expected. Defaulting to `${monochromeLogs}`")
             }
         }
 
@@ -37,7 +46,7 @@ class BactopiaConfig {
                 parametersSchema = config.parametersSchema
                 log.debug("Set `bactopia.parametersSchema` to ${parametersSchema}")
             } else {
-                log.warn("Incorrect value detected for `bactopia.parametersSchema`, a string is expected. Defaulting to `${parametersSchema}`")
+                logWarn("Incorrect value detected for `bactopia.parametersSchema`, a string is expected. Defaulting to `${parametersSchema}`")
             }
         }
 
@@ -47,7 +56,7 @@ class BactopiaConfig {
                 ignoreParams += config.ignoreParams
                 log.debug("Added the following parameters to the ignored parameters: ${config.ignoreParams}")
             } else {
-                log.warn("Incorrect value detected for `bactopia.ignoreParams`, a list with string values is expected. Defaulting to `${ignoreParams}`")
+                logWarn("Incorrect value detected for `bactopia.ignoreParams`, a list with string values is expected. Defaulting to `${ignoreParams}`")
             }
         }
     }

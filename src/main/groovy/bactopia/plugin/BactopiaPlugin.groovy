@@ -29,6 +29,9 @@ class BactopiaPlugin extends BasePlugin {
 
     BactopiaPlugin(PluginWrapper wrapper) {
         super(wrapper)
+        
+        // Initialize global log capturing
+        BactopiaLoggerFactory.initialize(false)
     }
 
 }

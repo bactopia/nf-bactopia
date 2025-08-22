@@ -25,8 +25,8 @@ workflow {
         exit 0
     }
 
+    // Initialize and execute the workflow
     BACTOPIATOOL_INIT(params.bactopia, params.workflow.ext, params.include, params.exclude)
-    
     SCCMEC(BACTOPIATOOL_INIT.out.samples)
 
     workflow.onComplete {

@@ -4,11 +4,10 @@ import groovy.util.logging.Slf4j
 import java.nio.file.Path
 
 import static bactopia.plugin.BactopiaUtils.fileExists
+import static bactopia.plugin.BactopiaTemplate.dashedLine
 
 @Slf4j
 class BactopiaTools {
-
-
     //
     // Collect the input samples from the Bactopia directory to be used by a given Bactopia Tool
     //
@@ -47,24 +46,29 @@ class BactopiaTools {
                     }
                 }
             } else {
-                log.error("The Bactopia directory ${bactopiaDir} (--bactopia) does not exist.")
+                log.error "The Bactopia directory ${bactopiaDir} (--bactopia) does not exist."
             }
         } else {
-            log.error("--bactopia is is not set.")
-            System.exit(1)
+            log.error "--bactopia is is not set."
         }
 
-        log.info("Found ${samples.size()} samples to process")
-        if (missing.size() > 0) {
-            log.warn("${missing.size()} samples were excluded due to missing files. They are:")
-            for (sample in missing) {
-                log.warn("    ${sample}")
+        if (samples.size() == 0) {
+            log.error(
+                "No samples were found to process! Please verify the --bactopia path \n" +
+                "is correct and that it contains Bactopia results."
+            )
+        } else {
+            log.info("Found ${samples.size()} samples to process")
+            if (missing.size() > 0) {
+                log.warn("${missing.size()} samples were excluded due to missing files. They are:")
+                for (sample in missing) {
+                    log.warn("    ${sample}")
+                }
             }
+            log.info("\nIf this looks wrong, now's your chance to back out (CTRL+C 3 times).")
+            log.info("Sleeping for 5 seconds...\n")
+            log.info dashedLine()
         }
-        log.info("\nIf this looks wrong, now's your chance to back out (CTRL+C 3 times).")
-        log.info("Sleeping for 5 seconds...")
-        log.info("--------------------------------------------------------------------")
-        sleep(5000)
         return samples
     }
 
@@ -89,9 +93,9 @@ class BactopiaTools {
             // If samples were found, log the number of samples
             if (samples.size() > 0) {
                 if (isInclude) {
-                    log.info "Including ${samples.size()} samples for analysis"
+                    log.info("Including ${samples.size()} samples for analysis")
                 } else {
-                    log.info "Excluding ${samples.size()} samples from the analysis"
+                    log.info("Excluding ${samples.size()} samples from the analysis")
                 }
             }
         }

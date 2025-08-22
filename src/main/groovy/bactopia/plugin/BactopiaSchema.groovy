@@ -37,7 +37,6 @@ import static bactopia.plugin.BactopiaUtils.isPositiveInteger
 import static bactopia.plugin.BactopiaUtils.fileNotFound
 import static bactopia.plugin.BactopiaUtils.fileNotGzipped
 import static bactopia.plugin.BactopiaTemplate.getLogColors
-import static bactopia.plugin.BactopiaTemplate.logError
 
 @Slf4j
 class BactopiaSchema {
@@ -159,13 +158,12 @@ class BactopiaSchema {
         //log.info "Unevaluated parameters: ${unevaluatedParams}"
 
         if (validationErrors.size() > 0) {
-            logError("The following parameters are invalid:")
+            log.error("The following parameters are invalid:")
             for (error in validationErrors) {
-                logError("    ${error}")
+                log.error("    ${error}")
             }
-            log.info " "
-            log.error "Validation of pipeline parameters failed! Please correct to continue"
-            System.exit(1)
+            log.info(" ")
+            log.error("\nValidation of pipeline parameters failed! Please correct to continue")
         }
 
         if (isBactopiaTool) {
@@ -229,7 +227,7 @@ class BactopiaSchema {
         }
 
         if (params.include && params.exclude) {
-            logError("'--include' and '--exclude' cannot be used together")
+            log.error("'--include' and '--exclude' cannot be used together")
             error += 1
         } else if (params.include) {
             error += fileNotFound(params.include, "include")
@@ -346,12 +344,12 @@ class BactopiaSchema {
             }
         } else if (params.workflow.name == "snippy") {
             if (params.accession && params.reference) {
-                log.error "'--accession' and '--reference' cannot be used together"
+                log.error("'--accession' and '--reference' cannot be used together")
                 error += 1
             } else if (params.reference) {
                 error += fileNotFound(params.reference, "reference")
             } else if (!params.accession && !params.reference) {
-                log.error "Either '--accession' and '--reference' is required"
+                log.error("Either '--accession' and '--reference' is required")
                 error += 1
             }
         } else if (params.workflow.name == "srahumanscrubber") {
@@ -384,13 +382,12 @@ class BactopiaSchema {
 
         // If errors print outcome
         if (missing_required.size() > 0) {
-            logError("Required parameters are missing, please check: " + missing_required.join(", "))
+            log.error("Required parameters are missing, please check: " + missing_required.join(", "))
             error += 1
         }
 
         if (error > 0) {
             log.error("\nValidation of pipeline parameters failed! Please correct to continue")
-            System.exit(1)
         }
 
         return "success"
@@ -427,13 +424,13 @@ class BactopiaSchema {
             }
             run_type = "hybrid"
         } else if (params.r1 && params.r2 && params.se) {
-            logError("Cannot use --r1, --r2, and --se together")
+            log.error("Cannot use --r1, --r2, and --se together")
             error += 1
         } else if (params.r1 && params.r2 && params.ont) {
-            logError("Cannot use --r1, --r2, and --ont together, unless using --short_polish or --hybrid")
+            log.error("Cannot use --r1, --r2, and --ont together, unless using --short_polish or --hybrid")
             error += 1
         } else if (params.ont && params.se) {
-            logError("Cannot use --ont and --se together")
+            log.error("Cannot use --ont and --se together")
             error += 1
         } else if (params.r1 && params.r2 && params.sample) {
             if (isLocal(params.r1)) {
@@ -464,18 +461,18 @@ class BactopiaSchema {
         } else if (params.accession) {
             run_type = "is_accession"
         } else {
-            logError("One or more required parameters are missing, please check and try again.")
+            log.error("One or more required parameters are missing, please check and try again.")
             error += 1
         }
 
         if (params.check_samples && !params.samples) {
-            logError("To use --check_samples, you must also provide a FOFN to check using --samples.")
+            log.error("To use --check_samples, you must also provide a FOFN to check using --samples.")
             error += 1
         }
 
         if (params.max_downloads >= 10) {
-            log.warn "Please be aware the value you have set for --max_downloads (${params.max_downloads}) may cause NCBI " +
-                     "to temporarily block your IP address due to too many queries at once."
+            log.warn("Please be aware the value you have set for --max_downloads (${params.max_downloads}) may cause NCBI " +
+                    "to temporarily block your IP address due to too many queries at once.")
         }
 
         if (params.genome_size) {
@@ -508,7 +505,7 @@ class BactopiaSchema {
                         }
                     }
                 } else {
-                    logError("Bactopia requires --bakta_db to be set when using --use_bakta")
+                    log.error("Bactopia requires --bakta_db to be set when using --use_bakta")
                     error += 1
                 }
             }
@@ -521,16 +518,14 @@ class BactopiaSchema {
                         error += fileNotFound("${params.kraken2_db}/hash.k2d", "kraken2_db")
                     }
                 }
-            } else 
-            if (params.kraken2_db) {
-                logError("Teton requires '--kraken2_db' to be provided")
+            } else if (params.kraken2_db) {
+                log.error("Teton requires '--kraken2_db' to be provided")
                 error += 1
             }
         }
 
         if (error > 0) {
-            log.error "\nValidation of pipeline parameters failed! Please correct to continue"
-            System.exit(1)
+            log.error("\nValidation of pipeline parameters failed! Please correct to continue")
         }
 
         return run_type

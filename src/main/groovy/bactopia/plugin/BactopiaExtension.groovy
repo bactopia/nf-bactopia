@@ -35,6 +35,7 @@ import bactopia.plugin.nfschema.HelpMessageCreator
 import bactopia.plugin.nfschema.SummaryCreator
 
 import static bactopia.plugin.inputs.BactopiaTools.collectInputs
+import static bactopia.plugin.BactopiaTemplate.dashedLine
 import static bactopia.plugin.BactopiaTemplate.getLogColors
 import static bactopia.plugin.BactopiaTemplate.getLogo
 import static bactopia.plugin.BactopiaTemplate.getWorkflowSummary
@@ -61,6 +62,11 @@ class BactopiaExtension extends PluginExtensionPoint {
         // Help message logic
         def Map params = (Map)session.params ?: [:]
         config = new BactopiaConfig(session?.config?.navigate('bactopia') as Map, params)
+        
+        // Initialize global log capture if not already done
+        if (!BactopiaLoggerFactory.isInitialized()) {
+            BactopiaLoggerFactory.initialize(config.monochromeLogs)
+        }
     }
 
 
@@ -68,13 +74,20 @@ class BactopiaExtension extends PluginExtensionPoint {
     // Collect Bactopia Tool inputs
     //
     @Function
-    public List bactopiaToolInputs(
+    public Map bactopiaToolInputs(
         String bactopiaDir,
         String extension,
         String includeFile,
         String excludeFile
     ) {
-        return collectInputs(bactopiaDir, extension, includeFile, excludeFile)
+        def List samples = collectInputs(bactopiaDir, extension, includeFile, excludeFile)
+        def Map logs = BactopiaLoggerFactory.captureAndClearLogs()
+        return [
+            hasErrors: logs.hasErrors,
+            error: logs.error,
+            logs: logs.logs,
+            samples: samples
+        ]
     }
 
 
@@ -129,7 +142,7 @@ class BactopiaExtension extends PluginExtensionPoint {
 
         def colors = getLogColors(config.monochromeLogs)
         String output = ''
-        log.info getLogo(workflow, config.monochromeLogs, params.workflow.name, params.workflow.description)
+        output += getLogo(workflow, config.monochromeLogs, params.workflow.name, params.workflow.description)
 
         def Map paramsMap = paramsSummaryMap(workflow, parameters_schema: schemaFilename)
         paramsMap.each { key, value ->
@@ -146,8 +159,8 @@ class BactopiaExtension extends PluginExtensionPoint {
                 output += '\n'
             }
         }
-        output += "!! Only displaying parameters that differ from the pipeline defaults !!\n"
-        output += "-${colors.dim}----------------------------------------------------${colors.reset}-"
+        output += "!! Only displaying parameters that differ from the defaults !!\n"
+        output += dashedLine(config.monochromeLogs) + "\n"
         return output
     }
 
@@ -187,7 +200,7 @@ class BactopiaExtension extends PluginExtensionPoint {
     * whether the given parameters adhere to the specifications
     */
     @Function
-    void validateParameters(
+    Map validateParameters(
         Map options = null,
         Boolean isBactopiaTool = false
     ) {
@@ -198,5 +211,23 @@ class BactopiaExtension extends PluginExtensionPoint {
             session.baseDir.toString(),
             isBactopiaTool
         )
+        return BactopiaLoggerFactory.captureAndClearLogs()
+    }
+    
+    /*
+    * Get all captured logs from the plugin
+    */
+    @Function
+    String getCapturedLogs(Boolean withColors = true) {
+        // Get all global logs directly from the factory
+        return BactopiaLoggerFactory.captureAndClearLogs(withColors)
+    }
+    
+    /*
+    * Clear all captured logs
+    */
+    @Function
+    void clearCapturedLogs() {
+        BactopiaLoggerFactory.clearLogs()
     }
 }
