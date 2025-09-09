@@ -160,7 +160,7 @@ class BactopiaTools {
                 if (ont) {
                     return [[id:sample, single_end:true, runtype:'ont'], [se], [], []]
                 } else {
-                    return [[id:sample, single_end:true, runtype:'illumina'], [se], []]
+                    return [[id:sample, single_end:true, runtype:'illumina'], [se], [], []]
                 }
             } else if (fileExists(pe1) && fileExists(pe2)) {
                 return [[id:sample, single_end:false, runtype:'illumina'], [pe1, pe2], [], []]
