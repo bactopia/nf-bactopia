@@ -15,6 +15,7 @@ nextflowPlugin {
     nextflowVersion = '25.04.0'
 
     provider = 'bactopia'
+    description = 'A plugin for working with Bactopia'
     className = 'bactopia.plugin.BactopiaPlugin'
     extensionPoints = [
         'bactopia.plugin.BactopiaExtension',

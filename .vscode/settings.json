@@ -8,5 +8,6 @@
         "fofn",
         "phix",
         "staphopia"
-    ]
+    ],
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
