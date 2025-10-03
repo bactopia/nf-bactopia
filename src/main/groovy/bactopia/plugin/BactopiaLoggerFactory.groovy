@@ -180,11 +180,12 @@ class BactopiaLoggerFactory {
     /**
      * Get the logs for using getCapturedLogsAsString and clear them
      */
-    static Map captureAndClearLogs(Boolean withColors = true) {
+    static Map captureAndClearLogs(String data = "", Boolean withColors = true) {
         Boolean hasErrors = hasErrors()
         String logs = getCapturedLogsAsString(withColors)
         clearLogs()
         return [
+            data: data,
             logs: logs,
             hasErrors: hasErrors,
             error: hasErrors ? "${colors.red}!! ERROR !!${colors.reset}\n\n" + logs : ""

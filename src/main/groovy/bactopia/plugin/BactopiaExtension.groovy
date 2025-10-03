@@ -34,7 +34,8 @@ import bactopia.plugin.BactopiaSchema
 import bactopia.plugin.nfschema.HelpMessageCreator
 import bactopia.plugin.nfschema.SummaryCreator
 
-import static bactopia.plugin.inputs.BactopiaTools.collectInputs
+import static bactopia.plugin.inputs.Bactopia.collectBactopiaInputs
+import static bactopia.plugin.inputs.BactopiaTools.collectBactopiaToolInputs
 import static bactopia.plugin.BactopiaTemplate.dashedLine
 import static bactopia.plugin.BactopiaTemplate.getLogColors
 import static bactopia.plugin.BactopiaTemplate.getLogo
@@ -69,6 +70,21 @@ class BactopiaExtension extends PluginExtensionPoint {
         }
     }
 
+    //
+    // Collect Bactopia inputs
+    //
+    @Function
+    public Map bactopiaInputs(String runType) {
+        def Map params = session.params
+        def List samples = collectBactopiaInputs(params, runType)
+        def Map logs = BactopiaLoggerFactory.captureAndClearLogs()
+        return [
+            hasErrors: logs.hasErrors,
+            error: logs.error,
+            logs: logs.logs,
+            samples: samples
+        ]
+    }
 
     //
     // Collect Bactopia Tool inputs
@@ -80,7 +96,7 @@ class BactopiaExtension extends PluginExtensionPoint {
         String includeFile,
         String excludeFile
     ) {
-        def List samples = collectInputs(bactopiaDir, extension, includeFile, excludeFile)
+        def List samples = collectBactopiaToolInputs(bactopiaDir, extension, includeFile, excludeFile)
         def Map logs = BactopiaLoggerFactory.captureAndClearLogs()
         return [
             hasErrors: logs.hasErrors,
@@ -205,13 +221,13 @@ class BactopiaExtension extends PluginExtensionPoint {
         Boolean isBactopiaTool = false
     ) {
         def BactopiaSchema validator = new BactopiaSchema(config)
-        validator.validateParameters(
+        def String result = validator.validateParameters(
             options,
             session.params,
             session.baseDir.toString(),
             isBactopiaTool
         )
-        return BactopiaLoggerFactory.captureAndClearLogs()
+        return BactopiaLoggerFactory.captureAndClearLogs(result)
     }
     
     /*
@@ -220,7 +236,8 @@ class BactopiaExtension extends PluginExtensionPoint {
     @Function
     String getCapturedLogs(Boolean withColors = true) {
         // Get all global logs directly from the factory
-        return BactopiaLoggerFactory.captureAndClearLogs(withColors)
+        def Map result = BactopiaLoggerFactory.captureAndClearLogs("", withColors)
+        return result.logs
     }
     
     /*

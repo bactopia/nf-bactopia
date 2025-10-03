@@ -11,7 +11,7 @@ class BactopiaTools {
     //
     // Collect the input samples from the Bactopia directory to be used by a given Bactopia Tool
     //
-    public static List collectInputs(String bactopiaDir, String extension, String includeFile, String excludeFile) {
+    public static List collectBactopiaToolInputs(String bactopiaDir, String extension, String includeFile, String excludeFile) {
         def Boolean includeAll = true
         def List inclusions = processFOFN(includeFile, true)
         def List exclusions = processFOFN(excludeFile, false)
@@ -134,7 +134,7 @@ class BactopiaTools {
         
         // Check if the SE reads are ONT or Illumina
         def Boolean ont = false
-        if (fileExists("${baseDir}/${PATHS['fastq']}/summary/${sample}-final_NanoPlot-report.html")) {
+        if (fileExists("${baseDir}/${PATHS['fastq']}/supplemental/${sample}-final_NanoPlot-report.html")) {
             // the se read is ONT data
             ont = true
         }
@@ -143,7 +143,7 @@ class BactopiaTools {
         // NOTE: Remote files will be assumed to exist
         //
         // Return List looks like:
-        // [ [id:sample, single_end:true/false, runtype:'illumina'/'ont'], [file1], [file2], ... ]
+        // [ [id:sample, name:sample, single_end:true/false, runtype:'illumina'/'ont'], [file1], [file2], ... ]
         // 0 - meta map
         // 1 - input files
         // 2 - extra files
@@ -151,19 +151,24 @@ class BactopiaTools {
         if (extension == "illumina_fastq") {
             // Prioritize PE reads first
             if (fileExists(pe1) && fileExists(pe2)) {
-                return [[id:sample, single_end:false, runtype:'illumina'], [pe1, pe2], [], []]
+                return [[id:sample, name:sample, single_end:false, runtype:'illumina'], [pe1, pe2], [], []]
             } else if (fileExists(se) && !ont) {
-                return [[id:sample, single_end:true, runtype:'illumina'], [se], [], []]
+                return [[id:sample, name:sample, single_end:true, runtype:'illumina'], [se], [], []]
+            }
+        } else if (extension == "illumina_pe_fastq") {
+            // Illumina PE only
+            if (fileExists(pe1) && fileExists(pe2)) {
+                return [[id:sample, name:sample, single_end:false, runtype:'illumina'], [pe1, pe2], [], []]
             }
         } else if (extension == 'fastq') {
             if (fileExists(se)) {
                 if (ont) {
-                    return [[id:sample, single_end:true, runtype:'ont'], [se], [], []]
+                    return [[id:sample, name:sample, single_end:true, runtype:'ont'], [se], [], []]
                 } else {
-                    return [[id:sample, single_end:true, runtype:'illumina'], [se], [], []]
+                    return [[id:sample, name:sample, single_end:true, runtype:'illumina'], [se], [], []]
                 }
             } else if (fileExists(pe1) && fileExists(pe2)) {
-                return [[id:sample, single_end:false, runtype:'illumina'], [pe1, pe2], [], []]
+                return [[id:sample, name:sample, single_end:false, runtype:'illumina'], [pe1, pe2], [], []]
             }
         } else if (extension == 'fna_fastq') {
             if (fileExists(se)) {
@@ -173,15 +178,15 @@ class BactopiaTools {
                 }
 
                 if (fileExists("${fna}.gz")) {
-                    return [[id:sample, single_end:true, is_compressed:true, runtype:runtype], ["${fna}.gz"], [se], []]
+                    return [[id:sample, name:sample, single_end:true, is_compressed:true, runtype:runtype], ["${fna}.gz"], [se], []]
                 } else if (fileExists(fna)) {
-                    return [[id:sample, single_end:true, is_compressed:false, runtype:runtype], [fna], [se], []]
+                    return [[id:sample, name:sample, single_end:true, is_compressed:false, runtype:runtype], [fna], [se], []]
                 }
             } else if (fileExists(pe1) && fileExists(pe2)) {
                 if (fileExists("${fna}.gz")) {
-                    return [[id:sample, single_end:false, is_compressed:true, runtype:'illumina'], ["${fna}.gz"], [pe1, pe2], []]
+                    return [[id:sample, name:sample, single_end:false, is_compressed:true, runtype:'illumina'], ["${fna}.gz"], [pe1, pe2], []]
                 } else if (fileExists(fna)) {
-                    return [[id:sample, single_end:false, is_compressed:false, runtype:'illumina'], [fna], [pe1, pe2], []]
+                    return [[id:sample, name:sample, single_end:false, is_compressed:false, runtype:'illumina'], [fna], [pe1, pe2], []]
                 }
             }
         } else if (extension == 'fna_faa_gff') {
@@ -197,9 +202,9 @@ class BactopiaTools {
             }
 
             if (fileExists("${fna}.gz") && fileExists("${faa}.gz") && fileExists("${gff}.gz")) {
-                return [[id:sample, is_compressed:true], ["${fna}.gz"], ["${faa}.gz"], ["${gff}.gz"]]
+                return [[id:sample, name:sample, is_compressed:true], ["${fna}.gz"], ["${faa}.gz"], ["${gff}.gz"]]
             } else if (fileExists(fna) && fileExists(faa) && fileExists(gff)) {
-                return [[id:sample, is_compressed:false], [fna], [faa], [gff]]
+                return [[id:sample, name:sample, is_compressed:false], [fna], [faa], [gff]]
             }
         } else if (extension == 'fna_faa') {
             // Default to Bakta faa
@@ -210,16 +215,16 @@ class BactopiaTools {
             }
 
             if (fileExists("${fna}.gz") && fileExists("${faa}.gz")) {
-                return [[id:sample, is_compressed:true], ["${fna}.gz"], ["${faa}.gz"], []]
+                return [[id:sample, name:sample, is_compressed:true], ["${fna}.gz"], ["${faa}.gz"], []]
             } else if (fileExists(fna) && fileExists(faa)) {
-                return [[id:sample, is_compressed:false], [fna], [faa], []]
+                return [[id:sample, name:sample, is_compressed:false], [fna], [faa], []]
             }
         } else if (extension == 'fna_meta') {
             // include the meta file
             if (fileExists("${fna}.gz") && fileExists(meta)) {
-                return [[id:sample, is_compressed:true], ["${fna}.gz"], [meta], []]
+                return [[id:sample, name:sample, is_compressed:true], ["${fna}.gz"], [meta], []]
             } else if (fileExists(fna) && fileExists(meta)) {
-                return [[id:sample, is_compressed:false], [fna], [meta], []]
+                return [[id:sample, name:sample, is_compressed:false], [fna], [meta], []]
             }
         } else if (extension == 'blastdb') {
             // Default to Bakta blastdb
@@ -230,7 +235,7 @@ class BactopiaTools {
             }
 
             if (fileExists(input)) {
-                return [[id:sample], [input], [], []]
+                return [[id:sample, name:sample], [input], [], []]
             }
         } else {
             // The remaining are generic 1 to 1 mappings
@@ -259,9 +264,9 @@ class BactopiaTools {
             } 
 
             if (fileExists("${input}.gz")) {
-                return [[id:sample, is_compressed:true], ["${input}.gz"], [], []]
+                return [[id:sample, name:sample, is_compressed:true], ["${input}.gz"], [], []]
             } else if (fileExists(input)) {
-                return [[id:sample, is_compressed:false], [input], [], []]
+                return [[id:sample, name:sample, is_compressed:false], [input], [], []]
             }
         }
 

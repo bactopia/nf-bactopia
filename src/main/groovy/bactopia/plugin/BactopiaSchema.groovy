@@ -283,6 +283,15 @@ class BactopiaSchema {
             } else {
                 missing_required << "--eggnog_db"
             }
+        }  else if (params.workflow.name == "fastani") {
+            if (!params.fastani_pairwise && !(params.fastani_reference || params.accession || params.accessions || params.species)) {
+                log.error("Either '--fastani_reference', '--accession', '--accessions', or '--species' is required unless using --fastani_pairwise")
+                error += 1
+            }
+
+            if (params.fastani_reference) {
+                error += fileNotFound(params.fastani_reference, "fastani_reference")
+            }
         } else if (params.workflow.name == "gamma") {
             if (params.gamma_db) {
                 error += fileNotFound(params.gamma_db, "gamma_db")

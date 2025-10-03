@@ -1,5 +1,5 @@
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha4'
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.9'
 }
 
 dependencies {
@@ -20,11 +20,4 @@ nextflowPlugin {
         'bactopia.plugin.BactopiaExtension',
         'bactopia.plugin.BactopiaFactory'
     ]
-
-    publishing {
-        registry {
-            url = 'https://nf-plugins-registry.dev-tower.net/api'
-            authToken = project.findProperty('pluginRegistry.accessToken')
-        }
-    }
 }
