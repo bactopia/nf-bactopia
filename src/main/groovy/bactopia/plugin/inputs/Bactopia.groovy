@@ -97,7 +97,7 @@ class Bactopia {
         /* Parse line and determine if single end or paired reads*/
         def Map meta = [:]
         meta.id = line.sample
-        meta.name = params.sample
+        meta.name = line.sample
         meta.runtype = line.runtype
 
         if (params.genome_size) {
@@ -186,14 +186,14 @@ class Bactopia {
 
         if (line.accession.startsWith('GCF') || line.accession.startsWith('GCA')) {
             meta.id = line.accession.split(/\./)[0]
-            meta.name = params.sample
+            meta.name = line.accession.split(/\./)[0]
             meta.runtype = "assembly_accession"
             meta.genome_size = params.genome_size
             meta.species = params.species
             return [meta, [params.empty_r1], [params.empty_r2], params.empty_extra]
         } else if (line.accession.startsWith('DRX') || line.accession.startsWith('ERX') || line.accession.startsWith('SRX')) {
             meta.id = line.accession
-            meta.name = params.sample
+            meta.name = line.accession
             meta.runtype = line.runtype == 'ont' ? "sra_accession_ont" : "sra_accession"
 
             // if genome_size is provided, use it, otherwise use the genome_size from the FOFN
@@ -225,11 +225,11 @@ class Bactopia {
         if (accession.length() > 0) {
             if (accession.startsWith('GCF') || accession.startsWith('GCA')) {
                 meta.id = accession.split(/\./)[0]
-                meta.name = params.sample
+                meta.name = accession.split(/\./)[0]
                 meta.runtype = "assembly_accession"
             } else if (accession.startsWith('DRX') || accession.startsWith('ERX') || accession.startsWith('SRX')) {
                 meta.id = accession
-                meta.name = params.sample
+                meta.name = accession
                 meta.runtype = params.ont ? "sra_accession_ont" : "sra_accession"
             } else {
                 log.error(

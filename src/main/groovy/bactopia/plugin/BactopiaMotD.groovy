@@ -17,7 +17,7 @@ class BactopiaMotD {
             "Learn more about Bactopia at https://bactopia.github.io/",
             "Feeling stuck? Check out the docs at https://bactopia.github.io/",
             "Bactopia is a pipeline for the analysis of bacterial genomes.",
-            "Bactopia was first released in Feburary 2019.",
+            "Bactopia was first released in February 2019.",
             "Bactopia is based on Staphopia which was specific to Staphylococcus aureus.",
             "Found a bug? Report it at https://github.com/bactopia/bactopia/issues",
             "Have a feature request? Open an issue at https://github.com/bactopia/bactopia/issues",
@@ -26,6 +26,8 @@ class BactopiaMotD {
             "Atlanta, Georgia has the highest percentage of tree canopy of any city in the United States.",
             "There are 71 variations of 'Peachtree' streets in Atlanta, Georgia.",
             "Wyoming is the least populous state in the United States. (~600k in 2025)",
+            "Wyoming has approximately 2.15 to 2.4 cows per person, the highest ratio of any U.S. state.",
+            "Wyoming is home to two escalators.",
 
             // Jokes
             "How does a penguin build its house? ${colors.cyan}${colors.italic}Igloos it together!${colors.reset}",
@@ -62,7 +64,7 @@ class BactopiaMotD {
             "What do you call a pig with three eyes? ${colors.cyan}${colors.italic}Piiig!${colors.reset}",
             "What do you call a pile of cats? ${colors.cyan}${colors.italic}A meow-tain!${colors.reset}",
             "What do you call a snowman with a six-pack? ${colors.cyan}${colors.italic}An abdominal snowman!${colors.reset}",
-            "What do you call an elephant that doesn’t matter? ${colors.cyan}${colors.italic}An irrelephant!${colors.reset}",
+            "What do you call an elephant that doesn't matter? ${colors.cyan}${colors.italic}An irrelephant!${colors.reset}",
             "What do you call an old snowman? ${colors.cyan}${colors.italic}Water!${colors.reset}",
             "What does an angry pepper do? ${colors.cyan}${colors.italic}It gets jalapeño business!${colors.reset}",
             "What does a cloud wear under his raincoat? ${colors.cyan}${colors.italic}Thunderwear!${colors.reset}",
@@ -93,6 +95,12 @@ class BactopiaMotD {
             "What did the triangle say to the circle? ${colors.cyan}${colors.italic}You're so pointless!${colors.reset}",
             "What happens when a snowman throws a tantrum? ${colors.cyan}${colors.italic}He has a meltdown!${colors.reset}",
             "What do you call a bear with no teeth? ${colors.cyan}${colors.italic}A gummy bear!${colors.reset}",
+            "Humpty Dumpty had a great fall. ${colors.cyan}${colors.italic}Summer wasn't too bad either!${colors.reset}",
+            "There are two reasons not to drink toilet water. ${colors.cyan}${colors.italic}Number one and number two!${colors.reset}",
+            "Why couldn't Pseudomonas get backstage at the concert? ${colors.cyan}${colors.italic}Because it was Staph only!${colors.reset}",
+            "No matter how popular antibiotics get, ${colors.cyan}${colors.italic}they will never go viral!${colors.reset}",
+            "What do call a bacterium that can swim fast? ${colors.cyan}${colors.italic}micro-Phelps!${colors.reset}",
+            "How do you turn soup into gold? ${colors.cyan}${colors.italic}Add 24 carrots!${colors.reset}",
         ]
         def random = new Random()
         def index = random.nextInt(messages.size())
