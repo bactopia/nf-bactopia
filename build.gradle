@@ -1,5 +1,5 @@
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.10'
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.12'
 }
 
 dependencies {
@@ -9,10 +9,10 @@ dependencies {
     implementation 'com.sanctionco.jmail:jmail:1.6.3' // Needed for e-mail format validation
 }
 
-version = '1.0.1'
+version = '1.0.2'
 
 nextflowPlugin {
-    nextflowVersion = '25.04.0'
+    nextflowVersion = '25.10.0'
 
     provider = 'bactopia'
     description = 'A plugin for working with Bactopia'

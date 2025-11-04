@@ -206,6 +206,10 @@ class BactopiaSchema {
             if (p['value'] instanceof Map) {
                 new_params.replace(p.key, cleanParameters(p['value'] as Map))
             }
+            // sample names can be integers, cast as string
+            if (p.key == 'sample' && p['value'] instanceof Integer) {
+                new_params.replace(p.key, p['value'].toString())
+            }
         }
         return new_params
     }

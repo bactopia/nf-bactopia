@@ -1,5 +1,14 @@
 # bactopia/nf-bactopia: Changelog
 
+## v1.0.2
+
+- bump to latest nextflow gradle plugin version
+- pin to nextflow 25.10.0
+
+## `Fixed`
+
+- sample names that are integers
+
 ## v1.0.1
 
 ### `Fixed`
