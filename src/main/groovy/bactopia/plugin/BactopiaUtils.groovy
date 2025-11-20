@@ -12,6 +12,21 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.yaml.snakeyaml.Yaml
 
+import nextflow.Session
+import nextflow.script.WorkflowMetadata
+
+import bactopia.plugin.BactopiaConfig
+import bactopia.plugin.BactopiaSchema
+import bactopia.plugin.nfschema.HelpMessageCreator
+import bactopia.plugin.nfschema.SummaryCreator
+
+import static bactopia.plugin.BactopiaTemplate.dashedLine
+import static bactopia.plugin.BactopiaTemplate.getLogColors
+import static bactopia.plugin.BactopiaTemplate.getLogo
+import static bactopia.plugin.BactopiaTemplate.getWorkflowSummary
+
+import static bactopia.plugin.nfschema.Common.getLongestKeyLength
+
 @Slf4j
 class BactopiaUtils {
     //
@@ -93,6 +108,17 @@ class BactopiaUtils {
 
 
     //
+    // Check if workflow is a Bactopia Tool
+    //
+    public static Boolean isBactopiaTool(params) {
+        if (params.containsKey('is_subworkflow') && params.is_subworkflow) {
+            return true
+        }
+        return false
+    }
+
+
+    //
     // Check if file is remote (e.g. AWS, Azure, GCP)
     //
     public static Boolean isLocal(filename) {
@@ -142,4 +168,121 @@ class BactopiaUtils {
             }
         }
     }
+
+    //=========================================================================================
+    //
+    // TraceObserver helper functions
+    // 
+    //=========================================================================================
+
+
+    //
+    // Groovy Map of the help message
+    //
+    public static String paramsHelp(Session session, BactopiaConfig config) {
+        def Map params = session.params
+        def String help = ""
+        def HelpMessageCreator helpCreator = new HelpMessageCreator(config, session, params["help_all"])
+        help += helpCreator.getBeforeText(session, (String) params["workflow"]["name"], (String) params["workflow"]["description"])
+        if (params["help_all"]) {
+            log.debug("Printing out the full help message")
+            help += helpCreator.getFullMessage()
+        } else if (params["help"]) {
+            log.debug("Printing out the short help message")
+            def paramValue = null
+            help += helpCreator.getShortMessage(paramValue instanceof String ? paramValue : "")
+        }
+        help += helpCreator.getAfterText()
+        return help
+    }
+
+    //
+    // Groovy Map summarizing parameters/workflow options used by the pipeline
+    //
+    public static Map paramsSummaryMap(
+        Map options = null,
+        WorkflowMetadata workflow,
+        Session session,
+        BactopiaConfig config
+        ) {
+        def SummaryCreator creator = new SummaryCreator(config)
+        return creator.getSummaryMap(
+            options,
+            workflow,
+            session.baseDir.toString(),
+            session.params
+        )
+    }
+
+    private static Map flattenNestedParamsMap(Map paramsMap) {
+        def Map returnMap = [:]
+        paramsMap.each { param, value ->
+            def String key = param as String
+            if (value instanceof Map) {
+                def Map flatMap = flattenNestedParamsMap(value as Map)
+                flatMap.each { flatParam, flatValue ->
+                    returnMap.put(key + "." + flatParam, flatValue)
+                }
+            } else {
+                returnMap.put(key, value)
+            }
+        }
+        return returnMap
+    }
+
+    /*
+     * Beautify parameters for summary and return as string
+     */
+    public static String paramsSummaryLog(
+        WorkflowMetadata workflow,
+        Session session,
+        BactopiaConfig config,
+        Map options = null
+    ) {
+        def Map params = session.params
+        def String schemaFilename = options?.containsKey('parameters_schema') ? options.parameters_schema as String : config.parametersSchema
+
+        def colors = getLogColors(config.monochromeLogs)
+        String output = ''
+        output += getLogo(workflow, config.monochromeLogs, params.workflow.name, params.workflow.description)
+
+        def Map paramsMap = paramsSummaryMap(
+            options,
+            workflow,
+            session,
+            config
+        )
+        paramsMap.each { key, value ->
+            paramsMap[key] = flattenNestedParamsMap(value as Map)
+        }
+        def maxChars  = getLongestKeyLength(paramsMap)
+        for (group in paramsMap.keySet()) {
+            def Map group_params = paramsMap.get(group) as Map // This gets the parameters of that particular group
+            if (group_params) {
+                output += "$colors.bold$group$colors.reset\n"
+                for (String param in group_params.keySet()) {
+                    output += "  " + colors.blue + param.padRight(maxChars) + ": " + colors.green +  group_params.get(param) + colors.reset + '\n'
+                }
+                output += '\n'
+            }
+        }
+        output += "!! Only displaying parameters that differ from the defaults !!\n"
+        output += dashedLine(config.monochromeLogs) + "\n"
+        return output
+    }
+
+    /*
+     * Beautify parameters for summary and return as string
+     */
+     public static String workflowSummary(Session session, BactopiaConfig config) {
+        def Map params = session.params
+        def WorkflowMetadata metadata = session.getWorkflowMetadata()
+        return getWorkflowSummary( 
+            metadata,
+            params,
+            session.config.manifest.version,
+            config.monochromeLogs,
+        )
+    }
+
 }

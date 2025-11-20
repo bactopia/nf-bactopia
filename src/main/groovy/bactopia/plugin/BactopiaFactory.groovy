@@ -17,6 +17,7 @@
 package bactopia.plugin
 
 import groovy.transform.CompileStatic
+
 import nextflow.Session
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceObserverFactoryV2
@@ -32,8 +33,13 @@ class BactopiaFactory implements TraceObserverFactoryV2 {
 
     @Override
     Collection<TraceObserverV2> create(Session session) {
-        final result = new ArrayList()
-        result.add( new BactopiaObserver() )
+        final result = new ArrayList<TraceObserverV2>()
+        result.add( 
+            new BactopiaObserver(
+                session,
+                new BactopiaConfig(session?.config?.navigate('bactopia') as Map, session.params)
+            ) 
+        )
         return result
     }
 }

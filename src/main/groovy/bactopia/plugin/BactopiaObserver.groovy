@@ -20,10 +20,17 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import java.nio.file.Path
 import java.nio.file.Paths
+
 import nextflow.Session
+import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceObserverV2
 
+import bactopia.plugin.BactopiaConfig
 import static bactopia.plugin.BactopiaMotD.getMotD
+import static bactopia.plugin.BactopiaTemplate.getWorkflowSummary
+import static bactopia.plugin.BactopiaUtils.paramsHelp
+import static bactopia.plugin.BactopiaUtils.paramsSummaryLog
+import static bactopia.plugin.BactopiaUtils.validateParameters
 
 /**
  * Bactopia workflow observer
@@ -34,11 +41,47 @@ import static bactopia.plugin.BactopiaMotD.getMotD
 @Slf4j
 class BactopiaObserver implements TraceObserverV2 {
 
-    @Override
-    void onFlowCreate(Session session) {}
+    private Session session
+    BactopiaConfig config
+
+    BactopiaObserver(
+        Session session,
+        BactopiaConfig config
+    ) {
+        this.session = session
+        this.config = config
+    }
 
     @Override
-    void onFlowComplete() {}
+    void onFlowCreate(Session session) {
+        def Map params = this.session.params
+        def WorkflowMetadata metadata = this.session.getWorkflowMetadata()
+        if (params["help"] || params["help_all"]) {
+            println paramsHelp(session, config)
+            System.exit(0)
+        } else {
+            // print params summary
+            println paramsSummaryLog(
+                metadata,
+                this.session,
+                this.config,
+                null
+            )
+        }
+    }
+
+    @Override
+    void onFlowComplete() {
+        def Map params = this.session.params
+        def WorkflowMetadata metadata = this.session.getWorkflowMetadata()
+        println getWorkflowSummary( 
+            metadata,
+            params,
+            this.session.config.manifest.version,
+            this.config.monochromeLogs,
+        )
+
+    }
 
     void onWorkflowPublish(String name, Object value) {}
     void onFilePublish(Path destination, Path source, Map annotations) {}

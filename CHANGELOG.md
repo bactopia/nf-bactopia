@@ -1,5 +1,9 @@
 # bactopia/nf-bactopia: Changelog
 
+## v1.0.3
+
+- Expose the config options
+
 ## v1.0.2
 
 - bump to latest nextflow gradle plugin version

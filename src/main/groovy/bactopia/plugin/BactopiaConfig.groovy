@@ -2,9 +2,9 @@ package bactopia.plugin
 
 import groovy.util.logging.Slf4j
 
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 
 /**
@@ -20,12 +20,22 @@ import nextflow.script.dsl.Description
 @Description('''
     The `bactopia` scope allows you to configure the `nf-bactopia` plugin.
 ''')
-class BactopiaConfig  implements ConfigScope  {
+class BactopiaConfig implements ConfigScope  {
 
+    @ConfigOption
+    @Description('Enable monochrome logs.')
     final public Boolean monochromeLogs = false
 
-    final public CharSequence  parametersSchema = "nextflow_schema.json"
+    @ConfigOption
+    @Description('Path to the parameters schema file.')
+    final public CharSequence parametersSchema = "nextflow_schema.json"
+
+    @ConfigOption
+    @Description('Ignore specific parameters.')
     final public Set<CharSequence> ignoreParams = [] // Defaults will be set on the Bactopia side
+
+    // Keep the no-arg constructor in order to be able to use the `@ConfigOption` annotation
+    BactopiaConfig(){}
 
     BactopiaConfig(Map map, Map params){
         def config = map ?: Collections.emptyMap()
@@ -40,7 +50,7 @@ class BactopiaConfig  implements ConfigScope  {
             }
         }
 
-        // parameterSchema
+        // parametersSchema
         if(config.containsKey("parametersSchema")) {
             if(config.parametersSchema instanceof CharSequence) {
                 parametersSchema = config.parametersSchema
