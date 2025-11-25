@@ -16,10 +16,12 @@
  */
 package bactopia.plugin
 
+import groovy.transform.CompileStatic
 import groovy.json.JsonBuilder
 import org.json.JSONObject
 import org.json.JSONArray
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import java.nio.file.Files
 import java.nio.file.Path
@@ -90,13 +92,9 @@ class BactopiaExtension extends PluginExtensionPoint {
     // Collect Bactopia Tool inputs
     //
     @Function
-    public Map bactopiaToolInputs(
-        String bactopiaDir,
-        String extension,
-        String includeFile,
-        String excludeFile
-    ) {
-        def List samples = collectBactopiaToolInputs(bactopiaDir, extension, includeFile, excludeFile)
+    public Map bactopiaToolInputs() {
+        def Map params = session.params
+        def List samples = collectBactopiaToolInputs(params)
         def Map logs = BactopiaLoggerFactory.captureAndClearLogs()
         return [
             hasErrors: logs.hasErrors,
@@ -106,15 +104,14 @@ class BactopiaExtension extends PluginExtensionPoint {
         ]
     }
 
-
     /*
     * Function to loop over all parameters defined in schema and check
     * whether the given parameters adhere to the specifications
     */
     @Function
-    Map validateParameters(
-        Map options = null,
-        Boolean isBactopiaTool = false
+    public Map validateParameters(
+        Map options,
+        Boolean isBactopiaTool
     ) {
         def BactopiaSchema validator = new BactopiaSchema(config)
         def String result = validator.validateParameters(
@@ -125,7 +122,7 @@ class BactopiaExtension extends PluginExtensionPoint {
         )
         return BactopiaLoggerFactory.captureAndClearLogs(result)
     }
-    
+
     /*
     * Get all captured logs from the plugin
     */

@@ -1,5 +1,14 @@
 # bactopia/nf-bactopia: Changelog
 
+## v1.0.8
+
+- Removed unused functions
+- Removed input parameters for bactopiaToolInputs since they are not needed
+
+## v1.0.4 - 1.0.7
+
+- Stuff happened -.-
+
 ## v1.0.3
 
 - Expose the config options

@@ -30,7 +30,6 @@ import static bactopia.plugin.BactopiaMotD.getMotD
 import static bactopia.plugin.BactopiaTemplate.getWorkflowSummary
 import static bactopia.plugin.BactopiaUtils.paramsHelp
 import static bactopia.plugin.BactopiaUtils.paramsSummaryLog
-import static bactopia.plugin.BactopiaUtils.validateParameters
 
 /**
  * Bactopia workflow observer

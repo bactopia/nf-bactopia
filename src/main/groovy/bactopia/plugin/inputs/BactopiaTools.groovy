@@ -11,17 +11,17 @@ class BactopiaTools {
     //
     // Collect the input samples from the Bactopia directory to be used by a given Bactopia Tool
     //
-    public static List collectBactopiaToolInputs(String bactopiaDir, String extension, String includeFile, String excludeFile) {
+    public static List collectBactopiaToolInputs(Map params) {
         def Boolean includeAll = true
-        def List inclusions = processFOFN(includeFile, true)
-        def List exclusions = processFOFN(excludeFile, false)
+        def List inclusions = processFOFN(params.include, true)
+        def List exclusions = processFOFN(params.exclude, false)
         def List ignoreList = ['.nextflow', 'bactopia-info', 'bactopia-tools', 'work', 'bactopia-runs', 'pipeline_info']
 
-        // Check if bactopiaDir exists, and if so loop through it
+        // Check if params.bactopia exists, and if so loop through it
         def List samples = []
         def List missing = []
-        if (bactopiaDir) {
-            Path bactopiaPath = Path.of(bactopiaDir)
+        if (params.bactopia) {
+            Path bactopiaPath = Path.of(params.bactopia)
             if (bactopiaPath.exists()) {
                 // loop through the Bactopia directory and collect the samples
                 bactopiaPath.eachFile { item ->
@@ -30,8 +30,8 @@ class BactopiaTools {
                         if (!ignoreList.contains(sample)) {
                             if (inclusions.contains(sample) || includeAll) {
                                 if (!exclusions.contains(sample)) {
-                                    if (_isSampleDir(sample, bactopiaDir)) {
-                                        def List inputs = _collectInputs(sample, bactopiaDir, extension)
+                                    if (_isSampleDir(sample, params.bactopia)) {
+                                        def List inputs = _collectInputs(sample, params.bactopia, params.workflow.ext)
                                         if (inputs[0] instanceof String) {
                                             missing << inputs
                                         } else {
@@ -46,7 +46,7 @@ class BactopiaTools {
                     }
                 }
             } else {
-                log.error "The Bactopia directory ${bactopiaDir} (--bactopia) does not exist."
+                log.error "The Bactopia directory ${params.bactopia} (--bactopia) does not exist."
             }
         } else {
             log.error "--bactopia is is not set."
