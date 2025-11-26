@@ -9,9 +9,13 @@ import static bactopia.plugin.BactopiaTemplate.dashedLine
 
 @Slf4j
 class Bactopia {
-    //
-    // Create input channel data structure based on runtype
-    //
+    /**
+     * Create input channel data structure based on runtype.
+     *
+     * @param params The workflow parameters
+     * @param runtype The type of run (paired-end, hybrid, assembly, etc.)
+     * @return List of sample data structures
+     */
     public static List collectBactopiaInputs(Map params, String runtype) {
         if (runtype == "is_fofn") {
             return processFOFN(params)
@@ -43,9 +47,12 @@ class Bactopia {
 
     }
 
-    //
-    // Handle multiple FASTQ files for merging
-    //
+    /**
+     * Handle multiple FASTQ files for merging.
+     *
+     * @param readSet The read set string containing file paths
+     * @return List of FASTQ file paths
+     */
     public static List<String> handleMultipleFqs(String readSet) {
         def List<String> fqs = []
         def String[] reads = readSet.split(",")
@@ -55,10 +62,12 @@ class Bactopia {
         return fqs
     }
 
-
-    //
-    // Process FOFN file and determine input type for each row
-    //
+    /**
+     * Process FOFN file and determine input type for each row.
+     *
+     * @param params The workflow parameters
+     * @return List of processed sample data structures
+     */
     public static List processFOFN(Map params) {
         def results = []
         def headers = null
@@ -89,10 +98,13 @@ class Bactopia {
         return results
     }
 
-
-    //
-    // Process a single FOFN line and determine input type
-    //
+    /**
+     * Process a single FOFN line and determine input type.
+     *
+     * @param line The FOFN line data
+     * @param params The workflow parameters
+     * @return List containing the processed sample data
+     */
     private static List _processFOFNLine(Map line, Map params) {
         /* Parse line and determine if single end or paired reads*/
         def Map meta = [:]
@@ -142,10 +154,12 @@ class Bactopia {
         }
     }
 
-
-    //
-    // Process accessions from CSV file
-    //
+    /**
+     * Process accessions from CSV file.
+     *
+     * @param params The workflow parameters
+     * @return List of processed accession data structures
+     */
     public static List processAccessions(Map params) {
         def results = []
         def headers = null
@@ -176,10 +190,13 @@ class Bactopia {
         return results
     }
 
-
-    //
-    // Process accessions from FOFN
-    //
+    /**
+     * Process a single accession line from FOFN.
+     *
+     * @param line The accession line data
+     * @param params The workflow parameters
+     * @return List containing the processed accession data
+     */
     public static List _processAccessionsLine(Map line, Map params) {
         /* Parse line and determine if single end or paired reads*/
         def Map meta = [:]
@@ -212,10 +229,12 @@ class Bactopia {
         }
     }
 
-
-    //
-    // Process single accession
-    //
+    /**
+     * Process single accession.
+     *
+     * @param params The workflow parameters
+     * @return List containing the processed accession data
+     */
     public static List processAccession(Map params) {
         String accession = params.accession
         def Map meta = [:]

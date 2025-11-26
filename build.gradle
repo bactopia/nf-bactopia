@@ -1,5 +1,6 @@
 plugins {
     id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.12'
+    id 'jacoco'
 }
 
 dependencies {
@@ -9,7 +10,57 @@ dependencies {
     implementation 'com.sanctionco.jmail:jmail:1.6.3' // Needed for e-mail format validation
 }
 
-version = '1.0.8'
+version = '1.0.9'
+
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        xml.outputLocation = file("${buildDir}/reports/jacoco/test/jacocoTestReport.xml")
+        html.required = true
+        html.outputLocation = file("${buildDir}/reports/jacoco/test/html")
+        csv.required = false
+    }
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                '**/nfschema/**',       // Exclude nfschema (vendored code) from coverage
+                '**/nf-core-utils/**'   // Exclude nf-core-utils (vendored code) from coverage
+            ])
+        }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+    violationRules {
+        rule {
+            limit {
+                counter = 'INSTRUCTION'
+                value = 'COVEREDRATIO'
+                minimum = 0.60  // 60% minimum instruction coverage
+            }
+        }
+    }
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                '**/nfschema/**',       // Exclude nfschema (vendored code) from coverage
+                '**/nf-core-utils/**'   // Exclude nf-core-utils (vendored code) from coverage
+            ])
+        }))
+    }
+}
+
+// Optional: Fail the build if coverage drops below threshold
+// Uncomment the next line to enable coverage verification
+// check.dependsOn jacocoTestCoverageVerification
+
+test.finalizedBy jacocoTestReport
 
 nextflowPlugin {
     nextflowVersion = '25.10.0'

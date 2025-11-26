@@ -180,9 +180,13 @@ class BactopiaSchema {
 
     //------------------------------------------------------------------------------------------------------------------
     // BEGIN - nextflow/nf-schema functions
-    //
-    // Clean and check parameters relative to Nextflow native classes
-    //
+
+    /**
+     * Clean and check parameters relative to Nextflow native classes.
+     *
+     * @param params The parameters map to clean
+     * @return Map containing cleaned parameters
+     */
     private Map cleanParameters(Map params) {
         def Map new_params = (Map) params.getClass().newInstance(params)
         for (p in params) {
@@ -215,7 +219,12 @@ class BactopiaSchema {
     }
     // END - nextflow/nf-schema functions
 
-
+    /**
+     * Validate Bactopia Tool parameters.
+     *
+     * @param params The workflow parameters
+     * @return String containing validation results or empty string
+     */
     public static String validateBactopiaToolParams(Map params) {
         def Integer error = 0
         def ArrayList missing_required = []
@@ -406,7 +415,12 @@ class BactopiaSchema {
         return "success"
     }
 
-
+    /**
+     * Validate Bactopia parameters and determine run type.
+     *
+     * @param params The workflow parameters
+     * @return String containing the run type or error
+     */
     public static String validateBactopiaParams(Map params) {
         def Integer error = 0
         def String run_type = ""
@@ -548,8 +562,18 @@ class BactopiaSchema {
     // Beautify parameters for --list_wfs
     //
     /*
+    return run_type
+    }
+
+    /**
+     * List available Bactopia workflows and exit.
+     *
+     * @param workflow The workflow metadata
+     * @param params The workflow parameters
+     * @return String containing the list of workflows
+     */
     public static String listWorkflows(workflow, params) {
-        Map colors = NfcoreTemplate.logColours(params.monochrome_logs)
+        Map colors = BactopiaTemplate.logColours(params.monochrome_logs)
         Integer num_hidden = 0
         String output  = ''
         output += "Below are a list of workflows you can call using the ${colors.cyan}--wf${colors.reset} parameter.\n\n"
@@ -621,6 +645,4 @@ class BactopiaSchema {
         }
         return output
     }
-    */
-
 }

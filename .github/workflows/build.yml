@@ -18,37 +18,62 @@ jobs:
       fail-fast: false
       matrix:
         java_version: [17]
-        nextflow_version: ['25.04']
+        nextflow_version: ['25.10.0']
 
     steps:
       - name: Environment
         run: env | sort
 
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: true
 
       - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v4
         with:
           java-version: ${{matrix.java_version}}
           architecture: x64
           distribution: 'temurin'
 
-      - name: Unit tests
-        run: make test
+      - name: Unit tests with coverage
+        run: ./gradlew test jacocoTestReport
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./build/reports/jacoco/test/jacocoTestReport.xml
+          flags: unittests
+          name: codecov-nf-bactopia
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Setup Nextflow ${{ matrix.nextflow_version }}
-        uses: nf-core/setup-nextflow@b9f764e8ba5c76b712ace14ecbfcef0e40ae2dd8 # v1
+        uses: nf-core/setup-nextflow@v2
         with:
           version: "${{ matrix.nextflow_version }}"
 
-      - name: Install
+      - name: Install plugin
         run: make install
 
-      - name: Test
-        run: nextflow run nf-bactopia-test/ -plugins nf-bactopia@1.0.0 --help
+      - name: Test plugin help
+        run: nextflow run nf-bactopia-test/ -plugins nf-bactopia@1.0.9 --help
+
+      - name: Run integration tests
+        run: |
+          cd nf-bactopia-test
+          nextflow run subworkflows/sccmec/test.nf -entry test_sccmec -plugins nf-bactopia@1.0.9 -profile test --outdir test_output
+        
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-nf-${{ matrix.nextflow_version }}
+          path: |
+            nf-bactopia-test/test_output/
+            nf-bactopia-test/.nextflow.log
+            build/reports/jacoco/
+            build/reports/tests/

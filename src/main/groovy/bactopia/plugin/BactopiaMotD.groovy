@@ -7,9 +7,12 @@ import static bactopia.plugin.BactopiaTemplate.getLogColors
 @Slf4j
 class BactopiaMotD {
 
-    //
-    // Print a Message of the Day (MotD) to the console
-    //
+    /**
+     * Get a random Message of the Day (MotD).
+     *
+     * @param monochrome_logs Whether to use monochrome logs
+     * @return String containing a random MotD
+     */
     public static String getMotD(Boolean monochrome_logs) {
         Map colors = getLogColors(monochrome_logs)
         def messages = [

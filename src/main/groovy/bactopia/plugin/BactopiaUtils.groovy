@@ -29,9 +29,9 @@ import static bactopia.plugin.nfschema.Common.getLongestKeyLength
 
 @Slf4j
 class BactopiaUtils {
-    //
-    // When running with -profile conda, warn if channels have not been set-up appropriately
-    //
+    /**
+     * When running with -profile conda, warn if channels have not been set-up appropriately.
+     */
     public static void checkCondaChannels() {
         Yaml parser = new Yaml()
         def channels = []
@@ -63,18 +63,13 @@ class BactopiaUtils {
         }
     }
 
-
-    //
-    // Join module args with appropriate spacing
-    //
-    public static String joinModuleArgs(args_list) {
-        return ' ' + args_list.join(' ')
-    }
-
-
-    //
-    //  Verify input is a positive integer
-    //
+    /**
+     * Verify input is a positive integer.
+     *
+     * @param value The value to check
+     * @param name The parameter name for error messages
+     * @return 0 if valid, 1 if invalid
+     */
     public static Integer isPositiveInteger(value, name) {
         def error = 0
         if (value.getClass() == Integer) {
@@ -94,10 +89,12 @@ class BactopiaUtils {
         return error
     }
 
-
-    //
-    //  Verify input file exists
-    //
+    /**
+     * Verify input file exists.
+     *
+     * @param filename The file path to check
+     * @return true if file exists, false otherwise
+     */
     public static Boolean fileExists(filename) {
         if (isLocal(filename)) {
             return new File(filename).exists()
@@ -106,21 +103,12 @@ class BactopiaUtils {
         return true
     }
 
-
-    //
-    // Check if workflow is a Bactopia Tool
-    //
-    public static Boolean isBactopiaTool(params) {
-        if (params.containsKey('is_subworkflow') && params.is_subworkflow) {
-            return true
-        }
-        return false
-    }
-
-
-    //
-    // Check if file is remote (e.g. AWS, Azure, GCP)
-    //
+    /**
+     * Check if file is remote (e.g. AWS, Azure, GCP).
+     *
+     * @param filename The file path to check
+     * @return false if remote, true if local
+     */
     public static Boolean isLocal(filename) {
         if (filename.startsWith('gs://') || filename.startsWith('s3://') || filename.startsWith('az://') || filename.startsWith('https://')) {
             return false
@@ -128,10 +116,13 @@ class BactopiaUtils {
         return true
     }
 
-
-    //
-    //  Check is a file is not found
-    //
+    /**
+     * Check if a file is not found.
+     *
+     * @param filename The file path to check
+     * @param parameter The parameter name for error messages
+     * @return 0 if file exists, 1 if not found
+     */
     public static Integer fileNotFound(filename, parameter) {
         if (!fileExists(filename)) {
             log.error('* --'+ parameter +': Unable to find "' + filename + '", please verify it exists.'.trim())
@@ -140,10 +131,13 @@ class BactopiaUtils {
         return 0
     }
 
-
-    //
-    //  Verify input file is GZipped
-    //
+    /**
+     * Verify input file is GZipped.
+     *
+     * @param filename The file path to check
+     * @param parameter The parameter name for error messages
+     * @return 0 if file is gzipped, 1 if not
+     */
     public static Integer fileNotGzipped(filename, parameter) {
         // https://github.com/ConnectedPlacesCatapult/TomboloDigitalConnector/blob/master/src/main/java/uk/org/tombolo/importer/ZipUtils.java
 
@@ -170,15 +164,16 @@ class BactopiaUtils {
     }
 
     //=========================================================================================
-    //
     // TraceObserver helper functions
-    // 
     //=========================================================================================
 
-
-    //
-    // Groovy Map of the help message
-    //
+    /**
+     * Generate help message from parameters schema.
+     *
+     * @param session The Nextflow session
+     * @param config The Bactopia configuration
+     * @return String containing the formatted help message
+     */
     public static String paramsHelp(Session session, BactopiaConfig config) {
         def Map params = session.params
         def String help = ""
@@ -196,9 +191,15 @@ class BactopiaUtils {
         return help
     }
 
-    //
-    // Groovy Map summarizing parameters/workflow options used by the pipeline
-    //
+    /**
+     * Create a map summarizing parameters and workflow options used by the pipeline.
+     *
+     * @param options Additional options for summary generation
+     * @param workflow The workflow metadata
+     * @param session The Nextflow session
+     * @param config The Bactopia configuration
+     * @return Map containing the parameter summary
+     */
     public static Map paramsSummaryMap(
         Map options = null,
         WorkflowMetadata workflow,
@@ -230,8 +231,14 @@ class BactopiaUtils {
         return returnMap
     }
 
-    /*
-     * Beautify parameters for summary and return as string
+    /**
+     * Beautify parameters for summary and return as string.
+     *
+     * @param workflow The workflow metadata
+     * @param session The Nextflow session
+     * @param config The Bactopia configuration
+     * @param options Additional options for summary generation
+     * @return String containing the formatted parameter summary
      */
     public static String paramsSummaryLog(
         WorkflowMetadata workflow,
@@ -271,8 +278,12 @@ class BactopiaUtils {
         return output
     }
 
-    /*
-     * Beautify parameters for summary and return as string
+    /**
+     * Generate workflow summary with metadata and parameters.
+     *
+     * @param session The Nextflow session
+     * @param config The Bactopia configuration
+     * @return String containing the formatted workflow summary
      */
      public static String workflowSummary(Session session, BactopiaConfig config) {
         def Map params = session.params

@@ -35,6 +35,8 @@ import bactopia.plugin.BactopiaConfig
 import bactopia.plugin.BactopiaSchema
 import bactopia.plugin.nfschema.HelpMessageCreator
 import bactopia.plugin.nfschema.SummaryCreator
+import bactopia.plugin.utils.ChannelUtils
+import bactopia.plugin.utils.SampleUtils
 
 import static bactopia.plugin.inputs.Bactopia.collectBactopiaInputs
 import static bactopia.plugin.inputs.BactopiaTools.collectBactopiaToolInputs
@@ -72,9 +74,12 @@ class BactopiaExtension extends PluginExtensionPoint {
         }
     }
 
-    //
-    // Collect Bactopia inputs
-    //
+    /**
+     * Collect Bactopia inputs.
+     *
+     * @param runType The type of run to collect inputs for
+     * @return Map containing hasErrors, error, logs, and samples
+     */
     @Function
     public Map bactopiaInputs(String runType) {
         def Map params = session.params
@@ -88,9 +93,11 @@ class BactopiaExtension extends PluginExtensionPoint {
         ]
     }
 
-    //
-    // Collect Bactopia Tool inputs
-    //
+    /**
+     * Collect Bactopia Tool inputs.
+     *
+     * @return Map containing hasErrors, error, logs, and samples
+     */
     @Function
     public Map bactopiaToolInputs() {
         def Map params = session.params
@@ -104,10 +111,14 @@ class BactopiaExtension extends PluginExtensionPoint {
         ]
     }
 
-    /*
-    * Function to loop over all parameters defined in schema and check
-    * whether the given parameters adhere to the specifications
-    */
+    /**
+     * Function to loop over all parameters defined in schema and check
+     * whether the given parameters adhere to the specifications.
+     *
+     * @param options Additional options for validation
+     * @param isBactopiaTool Whether this is a Bactopia Tool
+     * @return Map containing validation results and logs
+     */
     @Function
     public Map validateParameters(
         Map options,
@@ -123,9 +134,12 @@ class BactopiaExtension extends PluginExtensionPoint {
         return BactopiaLoggerFactory.captureAndClearLogs(result)
     }
 
-    /*
-    * Get all captured logs from the plugin
-    */
+    /**
+     * Get all captured logs from the plugin.
+     *
+     * @param withColors Whether to include color codes in the logs
+     * @return String containing all captured logs
+     */
     @Function
     String getCapturedLogs(Boolean withColors = true) {
         // Get all global logs directly from the factory
@@ -133,11 +147,47 @@ class BactopiaExtension extends PluginExtensionPoint {
         return result.logs
     }
     
-    /*
-    * Clear all captured logs
-    */
+    /**
+     * Clear all captured logs.
+     */
     @Function
     void clearCapturedLogs() {
         BactopiaLoggerFactory.clearLogs()
+    }
+
+    /**
+     * Gather results from a channel by collecting outputs and mapping to a single tuple.
+     *
+     * @param chResults Channel or List of tuples containing [meta, output]
+     * @param toolName The tool name to use as the id in the output meta map
+     * @return Channel or List containing a single tuple [meta, outputSet] where meta = [id: toolName]
+     */
+    @Function
+    Object gather(Object chResults, String toolName) {
+        return ChannelUtils.gather(chResults, toolName)
+    }
+
+    /**
+     * Mix multiple channels and flatten file sets.
+     * Transforms Tuple<Map, Set<Path>> to Tuple<Map, Path>.
+     *
+     * @param channels List of channels or lists, each containing tuples of [meta, files]
+     * @return Channel or List with flattened tuples [meta, file] for each file
+     */
+    @Function
+    Object flattenPaths(List channels) {
+        return ChannelUtils.flattenPaths(channels)
+    }
+
+    /**
+     * Adapt 4-element sample tuples to appropriate size based on data availability.
+     *
+     * @param samples Channel or List of tuples containing [meta, inputs, extra, extra2]
+     * @param dataTypes Number of data types (1, 2, or 3) to include in output, or a DataflowVariable containing the number
+     * @return Channel or List with tuples of appropriate size based on dataTypes
+     */
+    @Function
+    Object formatSamples(Object samples, Object dataTypes) {
+        return SampleUtils.formatSamples(samples, dataTypes)
     }
 }

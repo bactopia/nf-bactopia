@@ -8,9 +8,12 @@ import static bactopia.plugin.BactopiaTemplate.dashedLine
 
 @Slf4j
 class BactopiaTools {
-    //
-    // Collect the input samples from the Bactopia directory to be used by a given Bactopia Tool
-    //
+    /**
+     * Collect the input samples from the Bactopia directory to be used by a given Bactopia Tool.
+     *
+     * @param params The workflow parameters
+     * @return List of collected sample inputs
+     */
     public static List collectBactopiaToolInputs(Map params) {
         def Boolean includeAll = true
         def List inclusions = processFOFN(params.include, true)
@@ -72,10 +75,13 @@ class BactopiaTools {
         return samples
     }
 
-
-    //
-    // Process the include/exclude FOFN files
-    //
+    /**
+     * Process the include/exclude FOFN files.
+     *
+     * @param fofn The FOFN file path
+     * @param isInclude Whether this is an inclusion or exclusion list
+     * @return List of sample names
+     */
     private static List processFOFN(String fofn, Boolean isInclude) {
         def List samples = []
 
@@ -102,18 +108,25 @@ class BactopiaTools {
         return samples
     }
 
-
-    //
-    // Test if the sample directory is likely to contain Bactopia results
-    //
+    /**
+     * Test if the sample directory is likely to contain Bactopia results.
+     *
+     * @param sample The sample name
+     * @param dir The Bactopia directory path
+     * @return true if directory contains Bactopia results, false otherwise
+     */
     private static Boolean _isSampleDir(String sample, String dir) {
         return fileExists("${dir}/${sample}/main/gather/${sample}-meta.tsv")
     }
 
-
-    //
-    // Navigate the Bactopia output directory and collect the inputs for a given Bactopia Tool
-    //
+    /**
+     * Navigate the Bactopia output directory and collect the inputs for a given Bactopia Tool.
+     *
+     * @param sample The sample name
+     * @param dir The Bactopia directory path
+     * @param extension The tool-specific extension configuration
+     * @return List containing collected inputs or error message
+     */
     private static List _collectInputs(String sample, String dir, String extension) {
         def Map PATHS = [:]
         PATHS.blastdb = "annotator"
