@@ -7,3 +7,18 @@
 build
 work
 ./bactopia/
+
+# Coverage reports
+*.exec
+.jacoco/
+build/reports/
+
+# IDE files
+*.iml
+*.ipr
+*.iws
+.DS_Store
+
+# Test outputs
+test-output/
+*.log

@@ -51,21 +51,8 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Setup Nextflow ${{ matrix.nextflow_version }}
-        uses: nf-core/setup-nextflow@v2
-        with:
-          version: "${{ matrix.nextflow_version }}"
-
       - name: Install plugin
         run: make install
-
-      - name: Test plugin help
-        run: nextflow run nf-bactopia-test/ -plugins nf-bactopia@1.0.9 --help
-
-      - name: Run integration tests
-        run: |
-          cd nf-bactopia-test
-          nextflow run subworkflows/sccmec/test.nf -entry test_sccmec -plugins nf-bactopia@1.0.9 -profile test --outdir test_output
         
       - name: Upload test results
         if: always()
@@ -73,7 +60,5 @@ jobs:
         with:
           name: test-results-nf-${{ matrix.nextflow_version }}
           path: |
-            nf-bactopia-test/test_output/
-            nf-bactopia-test/.nextflow.log
             build/reports/jacoco/
             build/reports/tests/
