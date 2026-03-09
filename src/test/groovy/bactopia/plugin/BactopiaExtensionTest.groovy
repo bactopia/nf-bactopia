@@ -267,7 +267,7 @@ class BactopiaExtensionTest extends Specification {
         then: 'result should be returned from ChannelUtils'
         result != null
         result instanceof List
-        result[0] == [id: 'mytool']
+        result[0] == [id: 'mytool', args: '']
         result[1] instanceof Set
     }
 
@@ -291,10 +291,8 @@ class BactopiaExtensionTest extends Specification {
         when: 'gather is called'
         def result = extension.gather(list, 'mytool')
 
-        then: 'result should contain empty set'
-        result != null
-        result[1] instanceof Set
-        result[1].isEmpty()
+        then: 'result should be empty due to empty guard'
+        result == []
     }
 
     // Tests for flattenPaths()

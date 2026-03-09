@@ -91,6 +91,14 @@ public class JsonSchemaValidator {
                 printableError = "-> ${entryString}: ${fieldError}" as String
             } else if (validationType == "parameter") {
                 def String fieldName = locationList.join(".")
+
+                // Command line arguments are interpreted as strings, check numbers are ok
+                if (errorString == "Value is [string] but should be [integer]") {
+                    if (value.isBigInteger()) {
+                        return
+                    }
+                }
+
                 if(fieldName != "") {
                     printableError = "* --${fieldName} (${value}): ${errorString}" as String
                 }

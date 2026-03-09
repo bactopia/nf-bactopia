@@ -115,18 +115,15 @@ class BactopiaExtension extends PluginExtensionPoint {
      * Function to loop over all parameters defined in schema and check
      * whether the given parameters adhere to the specifications.
      *
-     * @param options Additional options for validation
      * @param isBactopiaTool Whether this is a Bactopia Tool
      * @return Map containing validation results and logs
      */
     @Function
     public Map validateParameters(
-        Map options,
         Boolean isBactopiaTool
     ) {
         def BactopiaSchema validator = new BactopiaSchema(config)
         def String result = validator.validateParameters(
-            options,
             session.params,
             session.baseDir.toString(),
             isBactopiaTool
@@ -158,13 +155,18 @@ class BactopiaExtension extends PluginExtensionPoint {
     /**
      * Gather results from a channel by collecting outputs and mapping to a single tuple.
      *
-     * @param chResults Channel or List of tuples containing [meta, output]
+     * Supports two modes:
+     * - Tuple mode (default): Destructures each item as [meta, output] and collects the output elements.
+     * - Record-aware mode (field: 'name'): Extracts r[fieldName] from each record item.
+     *
+     * @param options Optional named parameters: field (String) for record-aware mode, args (String) for extra arguments
+     * @param chResults Channel or List of tuples/records
      * @param toolName The tool name to use as the id in the output meta map
-     * @return Channel or List containing a single tuple [meta, outputSet] where meta = [id: toolName]
+     * @return Channel or List containing a single tuple [meta, outputSet] where meta = [id: toolName, args: args]
      */
     @Function
-    Object gather(Object chResults, String toolName) {
-        return ChannelUtils.gather(chResults, toolName)
+    Object gather(Map options = [:], Object chResults, String toolName) {
+        return ChannelUtils.gather(options, chResults, toolName)
     }
 
     /**
@@ -189,5 +191,29 @@ class BactopiaExtension extends PluginExtensionPoint {
     @Function
     Object formatSamples(Object samples, Object dataTypes) {
         return SampleUtils.formatSamples(samples, dataTypes)
+    }
+
+    /**
+     * Filter tuples where at least one element after the meta (index 0) is not null.
+     * Removes tuples where all data elements are null (e.g., samples with no valid reads/assemblies).
+     *
+     * @param input Channel or List of tuples containing [meta, data1, data2, ...]
+     * @return Channel or List with only tuples that have at least one non-null data element
+     */
+    @Function
+    Object filterWithData(Object input) {
+        return ChannelUtils.filterWithData(input)
+    }
+
+    /**
+     * Filter tuples where the first element after the meta (index 0) is not null.
+     * Removes tuples where the primary data element is null. (E.g. the given species was not found.)
+     *
+     * @param input Channel or List of tuples containing [meta, species_found, data2, ...]
+     * @return Channel or List with only tuples that have at least one non-null data element
+     */
+    @Function
+    Object filterMerlin(Object input) {
+        return ChannelUtils.filterMerlin(input)
     }
 }

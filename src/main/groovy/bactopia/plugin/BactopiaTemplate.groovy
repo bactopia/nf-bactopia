@@ -257,17 +257,19 @@ class BactopiaTemplate {
         if (workflow.success) {
             output += "Success          : ${workflow.success}\n"
             output += "${colors.bgreen}Merged Results${colors.reset}   : ${colors.green}${params.outdir}/${params.rundir}${colors.reset}\n\n"
+            def profile = workflow.profile.replaceAll('test,', '').replaceAll(',test', '').replaceAll('test', '')
+            profile = profile ? " -profile ${profile}" : ""
 
             if (params.workflow.name == "bactopia" || params.workflow.name == "staphopia") {
                 output += """
                     ${colors.bold}Further analyze your samples using Bactopia Tools, with the following command:${colors.reset}
                     -${colors.dim}------------------------------------------------------------------------------${colors.reset}-
-                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf <REPLACE_WITH_BACTOPIA_TOOL_NAME>${colors.reset}
+                    ${colors.cyan}bactopia${profile} --bactopia ${params.outdir} --wf <REPLACE_WITH_BACTOPIA_TOOL_NAME>${colors.reset}
 
                     Examples:
-                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf pangenome${colors.reset}
-                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf merlin${colors.reset}
-                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf sccmec${colors.reset}
+                    ${colors.cyan}bactopia${profile} --bactopia ${params.outdir} --wf pangenome${colors.reset}
+                    ${colors.cyan}bactopia${profile} --bactopia ${params.outdir} --wf merlin${colors.reset}
+                    ${colors.cyan}bactopia${profile} --bactopia ${params.outdir} --wf sccmec${colors.reset}
 
                     See the full list of available Bactopia Tools: ${colors.cyan}bactopia --list_wfs${colors.reset}
                 """.stripIndent()
@@ -275,17 +277,17 @@ class BactopiaTemplate {
                 output += """
                     ${colors.bold}Further analyze bacterial samples using Bactopia, with the following command:${colors.reset}
                     -${colors.dim}------------------------------------------------------------------------------${colors.reset}-
-                    ${colors.cyan}bactopia -profile ${workflow.profile} --samples ${params.outdir}/bactopia-runs/${params.rundir}/merged-results/teton-prepare.tsv${colors.reset}
+                    ${colors.cyan}bactopia${profile} --samples ${params.outdir}/bactopia-runs/${params.rundir}/merged-results/teton-prepare.tsv${colors.reset}
                 """.stripIndent()
             } else if (params.workflow.name == "cleanyerreads") {
                 output += """
                     ${colors.bold}Further analyze your samples using Bactopia Tools, with the following command:${colors.reset}
                     -${colors.dim}------------------------------------------------------------------------------${colors.reset}-
-                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf <REPLACE_WITH_BACTOPIA_TOOL_NAME>${colors.reset}
+                    ${colors.cyan}bactopia${profile} --bactopia ${params.outdir} --wf <REPLACE_WITH_BACTOPIA_TOOL_NAME>${colors.reset}
 
                     Examples:
-                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf bracken${colors.reset}
-                    ${colors.cyan}bactopia -profile ${workflow.profile} --bactopia ${params.outdir} --wf kraken2${colors.reset}
+                    ${colors.cyan}bactopia${profile} --bactopia ${params.outdir} --wf bracken${colors.reset}
+                    ${colors.cyan}bactopia${profile} --bactopia ${params.outdir} --wf kraken2${colors.reset}
 
                     See the full list of available Bactopia Tools: ${colors.cyan}bactopia --list_wfs${colors.reset}
                 """.stripIndent()

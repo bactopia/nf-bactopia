@@ -52,7 +52,7 @@ class BactopiaSchema {
         this.config = config
     }
 
-    final List<String> NF_OPTIONS = [
+    final HashSet<String> IGNORE_OPTS = new HashSet([
             // Options for base `nextflow` command
             'bg',
             'c',
@@ -119,8 +119,47 @@ class BactopiaSchema {
             'with-weblog',
             'without-docker',
             'without-podman',
-            'work-dir'
-        ]
+            'work-dir',
+
+            // Generic options used throughout Bactopia
+            'bactopia_version',
+            'config_profile_contact',
+            'config_profile_description',
+            'config_profile_name',
+            'config_profile_url',
+            'enable_conda',
+            'empty_adapters',
+            'empty_extra',
+            'empty_phix',
+            'empty_proteins',
+            'empty_r1',
+            'empty_r2',
+            'empty_tf',
+            'help_all',
+            'include_tools',
+            'infodir',
+            'is_ci',
+            'merge_folder',
+            'mix_downloads',
+            'no_check_certificate',
+            'publish_dir_mode',
+            'run_name',
+            'run_timestamp',
+            'rundir',
+            'schema_ignore_params',
+            'test_data',
+            'test_data_dir',
+            'workflow',
+
+            // bactopia-py related
+            'available_workflows',
+            'build_all',
+            'envtype',
+            'force_rebuild',
+            'silent',
+            'use_mamba',
+            'verbose'
+        ])
 
     private List<String> errors = []
     private boolean hasErrors() { errors.size()>0 }
@@ -134,7 +173,6 @@ class BactopiaSchema {
     private Integer terminalLength = System.getenv("COLUMNS")?.toInteger() ?: 100
 
     public String validateParameters(
-        Map options = null,
         Map inputParams = [:],
         String baseDir,
         Boolean isBactopiaTool = false
@@ -142,7 +180,7 @@ class BactopiaSchema {
         String run_type = ""
         log.debug "Starting parameters validation"
         // Read schema file
-        def String schemaFilename = options?.containsKey('parameters_schema') ? options.parameters_schema as String : config.parametersSchema
+        def String schemaFilename = config.parametersSchema
         def String schemaString = Files.readString( Path.of(getBasePath(baseDir, schemaFilename)) )
 
         // Clean the parameters and convert to JSON
@@ -189,30 +227,41 @@ class BactopiaSchema {
      */
     private Map cleanParameters(Map params) {
         def Map new_params = (Map) params.getClass().newInstance(params)
+
+        // Add ignore params to IGNORE_OPTS (HashSet<String>)
+        params.get('schema_ignore_params', '').split(',').collect { it.trim() }.each { IGNORE_OPTS.add(it) }
+
+        // Cleanup Parameters
         for (p in params) {
-            // remove anything evaluating to false
-            if (!p['value'] && p['value'] != 0) {
+            // Remove ignored parameters
+            if (IGNORE_OPTS.contains(p.key)) {
+                log.debug "DEBUG: Removing ignored parameter '${p.key} (type: ${p['value']?.getClass()?.getName()})'"
                 new_params.remove(p.key)
-            }
-            // Cast MemoryUnit to String
-            if (p['value'] instanceof MemoryUnit) {
+                continue
+            } else if (!p['value'] && p['value'] != 0) {
+                // remove anything evaluating to false
+                new_params.remove(p.key)
+            } else if (p['value'] instanceof MemoryUnit) {
+                // Cast MemoryUnit to String
                 new_params.replace(p.key, p['value'].toString())
-            }
-            // Cast Duration to String
-            if (p['value'] instanceof Duration) {
+            } else if (p['value'] instanceof Duration) {
+                // Cast Duration to String
                 new_params.replace(p.key, p['value'].toString())
-            }
-            // Cast LinkedHashMap to String
-            if (p['value'] instanceof LinkedHashMap) {
+            } else if (p['value'] instanceof LinkedHashMap) {
+                // Cast LinkedHashMap to String
                 new_params.replace(p.key, p['value'].toString())
-            }
-            // Parsed nested parameters
-            if (p['value'] instanceof Map) {
+            } else if (p['value'] instanceof Path) {
+                // Cast Path objects to String
+                new_params.replace(p.key, p['value'].toString())
+            } else if (p['value'] instanceof Map) {
+                // Parsed nested parameters
                 new_params.replace(p.key, cleanParameters(p['value'] as Map))
-            }
-            // sample names can be integers, cast as string
-            if (p.key == 'sample' && p['value'] instanceof Integer) {
+            } else if (p.key == 'sample' && p['value'] instanceof Integer) {
+                // sample names can be integers, cast as string
                 new_params.replace(p.key, p['value'].toString())
+            } else if (p.key == 'force' && p['value'] instanceof String) {
+                // force is interpreted as a string, cast as Boolean
+                new_params.replace(p.key, p['value'].toBoolean())
             }
         }
         return new_params
@@ -424,7 +473,7 @@ class BactopiaSchema {
     public static String validateBactopiaParams(Map params) {
         def Integer error = 0
         def String run_type = ""
-
+        
         if (params.samples) {
             error += fileNotFound(params.samples, "samples")
             run_type = "is_fofn"
@@ -488,7 +537,7 @@ class BactopiaSchema {
         } else if (params.accession) {
             run_type = "is_accession"
         } else {
-            log.error("One or more required parameters are missing, please check and try again.")
+            log.error("One or more required parameters (--r1, --r2, etc...) are missing, please check and try again.")
             error += 1
         }
 

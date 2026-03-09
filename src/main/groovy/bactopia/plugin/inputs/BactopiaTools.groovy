@@ -3,6 +3,8 @@ package bactopia.plugin.inputs
 import groovy.util.logging.Slf4j
 import java.nio.file.Path
 
+import static bactopia.plugin.utils.EmptyFiles.getEmptyPaths
+import static bactopia.plugin.utils.EmptyFiles.isEmptyFile
 import static bactopia.plugin.BactopiaUtils.fileExists
 import static bactopia.plugin.BactopiaTemplate.dashedLine
 
@@ -15,14 +17,15 @@ class BactopiaTools {
      * @return List of collected sample inputs
      */
     public static List collectBactopiaToolInputs(Map params) {
-        def Boolean includeAll = true
         def List inclusions = processFOFN(params.include, true)
+        def Boolean includeAll = inclusions.isEmpty()
         def List exclusions = processFOFN(params.exclude, false)
         def List ignoreList = ['.nextflow', 'bactopia-info', 'bactopia-tools', 'work', 'bactopia-runs', 'pipeline_info']
 
         // Check if params.bactopia exists, and if so loop through it
         def List samples = []
         def List missing = []
+        def Map EMPTY_PATHS = getEmptyPaths(params.empty_path)
         if (params.bactopia) {
             Path bactopiaPath = Path.of(params.bactopia)
             if (bactopiaPath.exists()) {
@@ -34,9 +37,9 @@ class BactopiaTools {
                             if (inclusions.contains(sample) || includeAll) {
                                 if (!exclusions.contains(sample)) {
                                     if (_isSampleDir(sample, params.bactopia)) {
-                                        def List inputs = _collectInputs(sample, params.bactopia, params.workflow.ext)
-                                        if (inputs[0] instanceof String) {
-                                            missing << inputs
+                                        def Map inputs = _collectInputs(sample, params.bactopia, params.workflow.ext, EMPTY_PATHS)
+                                        if (inputs.missing_required) {
+                                            missing << inputs.meta.id
                                         } else {
                                             samples << inputs
                                         }
@@ -52,7 +55,7 @@ class BactopiaTools {
                 log.error "The Bactopia directory ${params.bactopia} (--bactopia) does not exist."
             }
         } else {
-            log.error "--bactopia is is not set."
+            log.error "--bactopia is not set."
         }
 
         if (samples.size() == 0) {
@@ -120,14 +123,57 @@ class BactopiaTools {
     }
 
     /**
+     *
+     * Checks if an extension has the required files present in the Bactopia output directory.
+     *
+     * @params files A list of file paths to check
+     * @return true if any required files are missing, false otherwise
+     */
+    private static Boolean _missingRequiredFiles(List files) {
+        for (file in files) {
+            if (isEmptyFile(file)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Find annotation file, preferring Bakta over Prokka, and .gz over uncompressed.
+     * Returns null if not found (caller keeps existing default).
+     *
+     * @param baseDir The base directory path
+     * @param subdir The subdirectory for the annotation type
+     * @param sample The sample name
+     * @param baktaExt The Bakta file extension
+     * @param prokkaExt The Prokka file extension
+     * @return The found file path or null
+     */
+    private static Path _findAnnotationFile(String baseDir, String subdir, String sample,
+                                            String baktaExt, String prokkaExt) {
+        // Try Bakta first
+        def String bakta = "${baseDir}/${subdir}/bakta/${sample}.${baktaExt}"
+        if (fileExists("${bakta}.gz")) return Path.of("${bakta}.gz")
+        if (fileExists(bakta)) return Path.of(bakta)
+
+        // Fall back to Prokka
+        def String prokka = "${baseDir}/${subdir}/prokka/${sample}.${prokkaExt}"
+        if (fileExists("${prokka}.gz")) return Path.of("${prokka}.gz")
+        if (fileExists(prokka)) return Path.of(prokka)
+
+        // File not found
+        return null
+    }
+
+    /**
      * Navigate the Bactopia output directory and collect the inputs for a given Bactopia Tool.
      *
      * @param sample The sample name
      * @param dir The Bactopia directory path
      * @param extension The tool-specific extension configuration
-     * @return List containing collected inputs or error message
+     * @return Map containing collected inputs or error message
      */
-    private static List _collectInputs(String sample, String dir, String extension) {
+    private static Map _collectInputs(String sample, String dir, String extension, Map EMPTY_PATHS) {
         def Map PATHS = [:]
         PATHS.blastdb = "annotator"
         PATHS.fastq = "qc"
@@ -143,7 +189,7 @@ class BactopiaTools {
         def String pe1 = "${baseDir}/${PATHS['fastq']}/${sample}_R1.fastq.gz"
         def String pe2 = "${baseDir}/${PATHS['fastq']}/${sample}_R2.fastq.gz"
         def String fna = "${baseDir}/${PATHS['fna']}/${sample}.fna"
-        def String meta = "${baseDir}/${PATHS['meta']}/${sample}-meta.tsv"
+        def String meta_file = "${baseDir}/${PATHS['meta']}/${sample}-meta.tsv"
         
         // Check if the SE reads are ONT or Illumina
         def Boolean ont = false
@@ -152,138 +198,108 @@ class BactopiaTools {
             ont = true
         }
 
-        // Determine the inputs files required for the given extension
-        // NOTE: Remote files will be assumed to exist
-        //
-        // Return List looks like:
-        // [ [id:sample, name:sample, single_end:true/false, runtype:'illumina'/'ont'], [file1], [file2], ... ]
-        // 0 - meta map
-        // 1 - input files
-        // 2 - extra files
-        // 3 - extra files
+        // Collect all possible input types
+        def Map inputs = [
+            'meta': ['id':sample, 'name':sample],
+            'meta_file': fileExists(meta_file) ? meta_file : EMPTY_PATHS.empty_meta,
+            'r1': fileExists(pe1) ? pe1 : EMPTY_PATHS.empty_r1,
+            'r2': fileExists(pe2) ? pe2 : EMPTY_PATHS.empty_r2,
+            'se': fileExists(se) && !ont ? se : EMPTY_PATHS.empty_se,
+            'ont': fileExists(se) && ont ? se : EMPTY_PATHS.empty_ont,
+            'assembly': fileExists(fna) ? fna : fileExists("${fna}.gz") ? "${fna}.gz" : EMPTY_PATHS.empty_assembly,
+            'proteins': EMPTY_PATHS.empty_proteins,
+            'gbk': EMPTY_PATHS.empty_gbk,
+            'gff': EMPTY_PATHS.empty_gff,
+            'blastdb': EMPTY_PATHS.empty_blastdb,
+            'missing_required': false
+        ]
+
+        // Handle annotations
+        inputs['proteins'] = _findAnnotationFile(baseDir, PATHS['faa'], sample, 'faa', 'faa') ?: inputs['proteins']
+        inputs['gff'] = _findAnnotationFile(baseDir, PATHS['gff'], sample, 'gff3', 'gff') ?: inputs['gff']
+        inputs['gbk'] = _findAnnotationFile(baseDir, PATHS['gbk'], sample, 'gbff', 'gbk') ?: inputs['gbk']
+
+        def String blastdb = "${baseDir}/${PATHS['blastdb']}/bakta/${sample}-blastdb.tar.gz"
+        blastdb = fileExists(blastdb) ? blastdb : "${baseDir}/${PATHS['blastdb']}/prokka/${sample}-blastdb.tar.gz"
+        if (fileExists(blastdb)) { 
+            inputs['blastdb'] = blastdb
+        }
+
+        // Edit meta map based on extension
+        // Extensions with no additions: fna_faa_gff, fna_faa, fna_meta, blastdb, gbk, gff, proteins
+        def List required_files = []
         if (extension == "illumina_fastq") {
-            // Prioritize PE reads first
-            if (fileExists(pe1) && fileExists(pe2)) {
-                return [[id:sample, name:sample, single_end:false, runtype:'illumina'], [pe1, pe2], [], []]
-            } else if (fileExists(se) && !ont) {
-                return [[id:sample, name:sample, single_end:true, runtype:'illumina'], [se], [], []]
-            }
-        } else if (extension == "illumina_pe_fastq") {
-            // Illumina PE only
-            if (fileExists(pe1) && fileExists(pe2)) {
-                return [[id:sample, name:sample, single_end:false, runtype:'illumina'], [pe1, pe2], [], []]
+            inputs['meta'].runtype = 'illumina'
+            inputs['meta'].single_end = (fileExists(pe1) && fileExists(pe2)) ? false : true
+
+            if (inputs['meta'].single_end) {
+                required_files << inputs['se']
+            } else {
+                required_files << inputs['r1']
+                required_files << inputs['r2']
             }
         } else if (extension == 'fastq') {
             if (fileExists(se)) {
+                inputs['meta'].single_end = true
+                inputs['meta'].runtype = (ont) ? 'ont' : 'illumina'
+
                 if (ont) {
-                    return [[id:sample, name:sample, single_end:true, runtype:'ont'], [se], [], []]
+                    required_files << inputs['ont']
                 } else {
-                    return [[id:sample, name:sample, single_end:true, runtype:'illumina'], [se], [], []]
+                    required_files << inputs['se']
                 }
             } else if (fileExists(pe1) && fileExists(pe2)) {
-                return [[id:sample, name:sample, single_end:false, runtype:'illumina'], [pe1, pe2], [], []]
+                inputs['meta'].single_end = false
+                inputs['meta'].runtype = 'illumina'
+                required_files << inputs['r1']
+                required_files << inputs['r2']
             }
         } else if (extension == 'fna_fastq') {
+            required_files << inputs['assembly']
             if (fileExists(se)) {
-                def String runtype = "illumina"
+                inputs['meta'].single_end = true
+                inputs['meta'].runtype = (ont) ? 'ont' : 'illumina'
                 if (ont) {
-                    runtype = "ont"
-                }
-
-                if (fileExists("${fna}.gz")) {
-                    return [[id:sample, name:sample, single_end:true, is_compressed:true, runtype:runtype], ["${fna}.gz"], [se], []]
-                } else if (fileExists(fna)) {
-                    return [[id:sample, name:sample, single_end:true, is_compressed:false, runtype:runtype], [fna], [se], []]
+                    required_files << inputs['ont']
+                } else {
+                    required_files << inputs['se']
                 }
             } else if (fileExists(pe1) && fileExists(pe2)) {
-                if (fileExists("${fna}.gz")) {
-                    return [[id:sample, name:sample, single_end:false, is_compressed:true, runtype:'illumina'], ["${fna}.gz"], [pe1, pe2], []]
-                } else if (fileExists(fna)) {
-                    return [[id:sample, name:sample, single_end:false, is_compressed:false, runtype:'illumina'], [fna], [pe1, pe2], []]
-                }
+                inputs['meta'].single_end = false
+                inputs['meta'].runtype = 'illumina'
+                required_files << inputs['r1']
+                required_files << inputs['r2']
             }
         } else if (extension == 'fna_faa_gff') {
-            // Default to Bakta faa
-            fna = "${baseDir}/${PATHS['faa']}/bakta/${sample}.fna"
-            def String faa = "${baseDir}/${PATHS['faa']}/bakta/${sample}.faa"
-            def String gff = "${baseDir}/${PATHS['faa']}/bakta/${sample}.gff3"
-            if (!fileExists(faa) && !fileExists("${faa}.gz")) {
-                // Fall back on Prokka
-                fna = "${baseDir}/${PATHS['faa']}/prokka/${sample}.fna"
-                faa = "${baseDir}/${PATHS['faa']}/prokka/${sample}.faa"
-                gff = "${baseDir}/${PATHS['faa']}/prokka/${sample}.gff"
-            }
-
-            if (fileExists("${fna}.gz") && fileExists("${faa}.gz") && fileExists("${gff}.gz")) {
-                return [[id:sample, name:sample, is_compressed:true], ["${fna}.gz"], ["${faa}.gz"], ["${gff}.gz"]]
-            } else if (fileExists(fna) && fileExists(faa) && fileExists(gff)) {
-                return [[id:sample, name:sample, is_compressed:false], [fna], [faa], [gff]]
-            }
+            required_files << inputs['assembly']
+            required_files << inputs['proteins']
+            required_files << inputs['gff']
         } else if (extension == 'fna_faa') {
-            // Default to Bakta faa
-            def String faa = "${baseDir}/${PATHS['faa']}/bakta/${sample}.faa"
-            if (!fileExists(faa) && !fileExists("${faa}.gz")) {
-                // Fall back on Prokka
-                faa = "${baseDir}/${PATHS['faa']}/prokka/${sample}.faa"
-            }
-
-            if (fileExists("${fna}.gz") && fileExists("${faa}.gz")) {
-                return [[id:sample, name:sample, is_compressed:true], ["${fna}.gz"], ["${faa}.gz"], []]
-            } else if (fileExists(fna) && fileExists(faa)) {
-                return [[id:sample, name:sample, is_compressed:false], [fna], [faa], []]
-            }
+            required_files << inputs['assembly']
+            required_files << inputs['proteins']
         } else if (extension == 'fna_meta') {
-            // include the meta file
-            if (fileExists("${fna}.gz") && fileExists(meta)) {
-                return [[id:sample, name:sample, is_compressed:true], ["${fna}.gz"], [meta], []]
-            } else if (fileExists(fna) && fileExists(meta)) {
-                return [[id:sample, name:sample, is_compressed:false], [fna], [meta], []]
-            }
+            required_files << inputs['assembly']
+            required_files << inputs['meta_file']
         } else if (extension == 'blastdb') {
-            // Default to Bakta blastdb
-            def String input = "${baseDir}/${PATHS[extension]}/bakta/${sample}-${extension}.tar.gz"
-            if (!fileExists(input)) {
-                // Fall back on Prokka
-                input = "${baseDir}/${PATHS[extension]}/prokka/${sample}-${extension}.tar.gz"
-            }
+            required_files << inputs['blastdb']
+        } else if (extension == 'gbk') {
+            required_files << inputs['gbk']
+        } else if (extension == 'gff') {
+            required_files << inputs['gff']
+        } else if (extension == 'proteins') {
+            required_files << inputs['proteins']
+        }
 
-            if (fileExists(input)) {
-                return [[id:sample, name:sample], [input], [], []]
-            }
-        } else {
-            // The remaining are generic 1 to 1 mappings
-            def String input = "${baseDir}/${PATHS[extension]}/${sample}.${extension}"
-            if (extension == "gbk") {
-                // Default to Bakta (gbff)
-                input = "${baseDir}/${PATHS[extension]}/bakta/${sample}.gbff"
-                if (!fileExists(input) && !fileExists("${input}.gz")) {
-                    // Fall back on Prokka (gbk)
-                    input = "${baseDir}/${PATHS[extension]}/prokka/${sample}.${extension}"
-                }
-            } else if (extension == "gff") {
-                // Default to Bakta (gff3)
-                input = "${baseDir}/${PATHS[extension]}/bakta/${sample}.gff3"
-                if (!fileExists(input) && !fileExists("${input}.gz")) {
-                    // Fall back on Prokka (gff)
-                    input = "${baseDir}/${PATHS[extension]}/prokka/${sample}.${extension}"
-                }
-            } else if (extension == "faa") {
-                // Default to Bakta faa
-                input = "${baseDir}/${PATHS[extension]}/bakta/${sample}.${extension}"
-                if (!fileExists(input) && !fileExists("${input}.gz")) {
-                    // Fall back on Prokka
-                    input = "${baseDir}/${PATHS[extension]}/prokka/${sample}.${extension}"
-                }
-            } 
+        // Check for missing required files
+        inputs['missing_required'] = _missingRequiredFiles(required_files)
 
-            if (fileExists("${input}.gz")) {
-                return [[id:sample, name:sample, is_compressed:true], ["${input}.gz"], [], []]
-            } else if (fileExists(input)) {
-                return [[id:sample, name:sample, is_compressed:false], [input], [], []]
+        // Convert all non-meta, non-boolean fields to Path for record type compatibility
+        inputs.each { key, value ->
+            if (value != null && !(value instanceof Path) && !(value instanceof Map) && !(value instanceof Boolean)) {
+                inputs[key] = Path.of(value.toString())
             }
         }
 
-        // If we get here, the sample is missing the required files
-        return [sample]
+        return inputs
     }
 }

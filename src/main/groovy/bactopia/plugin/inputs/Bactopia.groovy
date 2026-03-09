@@ -1,11 +1,8 @@
 package bactopia.plugin.inputs
 
 import groovy.util.logging.Slf4j
-import java.nio.file.Path
-import java.nio.file.Files
 
-import static bactopia.plugin.BactopiaUtils.fileExists
-import static bactopia.plugin.BactopiaTemplate.dashedLine
+import static bactopia.plugin.utils.EmptyFiles.getEmptyPaths
 
 @Slf4j
 class Bactopia {
@@ -14,15 +11,16 @@ class Bactopia {
      *
      * @param params The workflow parameters
      * @param runtype The type of run (paired-end, hybrid, assembly, etc.)
-     * @return List of sample data structures
+     * @return List of Map of sample data structures
      */
-    public static List collectBactopiaInputs(Map params, String runtype) {
+    public static List<Map> collectBactopiaInputs(Map params, String runtype) {
+        def Map EMPTY_PATHS = getEmptyPaths(params.empty_path)
         if (runtype == "is_fofn") {
-            return processFOFN(params)
+            return processFOFN(params, EMPTY_PATHS)
         } else if (runtype == "is_accessions") {
-            return processAccessions(params)
+            return processAccessions(params, EMPTY_PATHS)
         } else if (runtype == "is_accession") {
-            return processAccession(params)
+            return processAccession(params, EMPTY_PATHS)
         } else {
             def Map meta = [:]
             meta.id = params.sample
@@ -32,19 +30,58 @@ class Bactopia {
             meta.species = params.species
             
             if (runtype == "paired-end") {
-                return [[meta, [params.r1], [params.r2], params.empty_extra]]
+                meta.single_end = false
+                return [[
+                    'meta': meta,
+                    'r1': [params.r1],
+                    'r2': [params.r2],
+                    'se': [EMPTY_PATHS.empty_se],
+                    'lr': [EMPTY_PATHS.empty_ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]]
+            } else if (runtype == "single-end") {
+                meta.single_end = true
+                return [[
+                    'meta': meta,
+                    'r1': [EMPTY_PATHS.empty_r1],
+                    'r2': [EMPTY_PATHS.empty_r2],
+                    'se': [params.se],
+                    'lr': [EMPTY_PATHS.empty_ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]]
             } else if (runtype == "hybrid" || runtype == "short_polish") {
-                return [[meta, [params.r1], [params.r2], params.ont]]
+                meta.single_end = runtype == "short_polish" ? true : false
+                return [[
+                    'meta': meta,
+                    'r1': [params.r1],
+                    'r2': [params.r2],
+                    'se': [EMPTY_PATHS.empty_se],
+                    'lr': [params.ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]]
             } else if (runtype == "assembly") {
-                return [[meta, [params.empty_r1], [params.empty_r2], params.assembly]]
+                return [[
+                    'meta': meta,
+                    'r1': [EMPTY_PATHS.empty_r1],
+                    'r2': [EMPTY_PATHS.empty_r2],
+                    'se': [EMPTY_PATHS.empty_se],
+                    'lr': [EMPTY_PATHS.empty_ont],
+                    'assembly': [params.assembly]
+                ]]
             } else if (runtype == "ont") {
-                return [[meta, [params.ont], [params.empty_r2], params.empty_extra]]
+                meta.single_end = true
+                return [[
+                    'meta': meta,
+                    'r1': [EMPTY_PATHS.empty_r1],
+                    'r2': [EMPTY_PATHS.empty_r2],
+                    'se': [EMPTY_PATHS.empty_se],
+                    'lr': [params.ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]]
             } else {
-                return [[meta, [params.se], [params.empty_r2], params.empty_extra]]
+                log.error("Invalid runtype '${runtype}' provided, please correct to continue. Expected: paired-end, single-end, hybrid, short_polish, assembly, or ont")
             }
         }
-
-
     }
 
     /**
@@ -66,9 +103,10 @@ class Bactopia {
      * Process FOFN file and determine input type for each row.
      *
      * @param params The workflow parameters
+     * @param EMPTY_PATHS Map of empty file paths
      * @return List of processed sample data structures
      */
-    public static List processFOFN(Map params) {
+    public static List<Map> processFOFN(Map params, Map EMPTY_PATHS) {
         def results = []
         def headers = null
         def isFirstLine = true
@@ -91,7 +129,7 @@ class Bactopia {
                 }
                 
                 // Process and collect the result
-                results << _processFOFNLine(line, params)
+                results << _processFOFNLine(line, params, EMPTY_PATHS)
             }
         }
         
@@ -103,9 +141,10 @@ class Bactopia {
      *
      * @param line The FOFN line data
      * @param params The workflow parameters
-     * @return List containing the processed sample data
+     * @param EMPTY_PATHS Map of empty file paths
+     * @return Map containing the processed sample data
      */
-    private static List _processFOFNLine(Map line, Map params) {
+    private static Map _processFOFNLine(Map line, Map params, Map EMPTY_PATHS) {
         /* Parse line and determine if single end or paired reads*/
         def Map meta = [:]
         meta.id = line.sample
@@ -129,20 +168,90 @@ class Bactopia {
         }
         
         if (line.sample) {
-            if (line.runtype == 'single-end' || line.runtype == 'ont') {
-                return [meta, [line.r1], [params.empty_r2], params.empty_extra]
+            // List contents = [meta, [r1], [r2], [se], [ont], [assembly]]
+            if (line.runtype == 'ont') {
+                meta.single_end = true
+                return [
+                    'meta': meta,
+                    'r1': [EMPTY_PATHS.empty_r1],
+                    'r2': [EMPTY_PATHS.empty_r2],
+                    'se': [EMPTY_PATHS.empty_se],
+                    'lr': [line.ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]
+            } else if (line.runtype == 'single-end') {
+                meta.single_end = true
+                return [
+                    'meta': meta,
+                    'r1': [EMPTY_PATHS.empty_r1],
+                    'r2': [EMPTY_PATHS.empty_r2],
+                    'se': [line.se],
+                    'lr': [EMPTY_PATHS.empty_ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]
             } else if (line.runtype == 'paired-end') {
-                return [meta, [line.r1], [line.r2], params.empty_extra]
+                meta.single_end = false
+                return [
+                    'meta': meta,
+                    'r1': [line.r1],
+                    'r2': [line.r2],
+                    'se': [EMPTY_PATHS.empty_se],
+                    'lr': [EMPTY_PATHS.empty_ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]
             } else if (line.runtype == 'hybrid' || line.runtype == 'short_polish') {
-                return [meta, [line.r1], [line.r2], line.extra]
+                // short polish = ONT primary reads, so single-end
+                // hybrid = Illumina primary reads, so paired-end
+                meta.single_end = line.runtype == 'short_polish' ? true : false
+                return [
+                    'meta': meta,
+                    'r1': [line.r1],
+                    'r2': [line.r2],
+                    'se': [EMPTY_PATHS.empty_se],
+                    'lr': [line.ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]
             } else if (line.runtype == 'assembly') {
-                return [meta, [params.empty_r1], [params.empty_r2], line.extra]
+                return [
+                    'meta': meta,
+                    'r1': [EMPTY_PATHS.empty_r1],
+                    'r2': [EMPTY_PATHS.empty_r2],
+                    'se': [EMPTY_PATHS.empty_se],
+                    'lr': [EMPTY_PATHS.empty_ont],
+                    'assembly': [line.assembly]
+                ]
             } else if (line.runtype == 'merge-pe') {
-                return [meta, handleMultipleFqs(line.r1), handleMultipleFqs(line.r2), params.empty_extra]
+                meta.single_end = false
+                return [
+                    'meta': meta,
+                    'r1': handleMultipleFqs(line.r1),
+                    'r2': handleMultipleFqs(line.r2),
+                    'se': [EMPTY_PATHS.empty_se],
+                    'lr': [EMPTY_PATHS.empty_ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]
             } else if (line.runtype == 'hybrid-merge-pe' || line.runtype == 'short_polish-merge-pe') {
-                return [meta, handleMultipleFqs(line.r1), handleMultipleFqs(line.r2), line.extra]
+                // short polish = ONT primary reads, so single-end
+                // hybrid = Illumina primary reads, so paired-end
+                meta.single_end = line.runtype == 'short_polish-merge-pe' ? true : false
+                return [
+                    'meta': meta,
+                    'r1': handleMultipleFqs(line.r1),
+                    'r2': handleMultipleFqs(line.r2),
+                    'se': [EMPTY_PATHS.empty_se],
+                    'lr': [line.ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]
             } else if (line.runtype == 'merge-se') {
-                return [meta, handleMultipleFqs(line.r1), [params.empty_r2], params.empty_extra]
+                meta.single_end = true
+                return [
+                    'meta': meta,
+                    'r1': [EMPTY_PATHS.empty_r1],
+                    'r2': [EMPTY_PATHS.empty_r2],
+                    'se': handleMultipleFqs(line.se),
+                    'lr': [EMPTY_PATHS.empty_ont],
+                    'assembly': [EMPTY_PATHS.empty_assembly]
+                ]
             } else {
                 log.error(
                     "Invalid runtype ${line.runtype} found, please correct to continue. " +
@@ -158,9 +267,10 @@ class Bactopia {
      * Process accessions from CSV file.
      *
      * @param params The workflow parameters
-     * @return List of processed accession data structures
+     * @param EMPTY_PATHS Map of empty file paths
+     * @return List of Maps of processed accession data structures
      */
-    public static List processAccessions(Map params) {
+    public static List<Map> processAccessions(Map params, Map EMPTY_PATHS) {
         def results = []
         def headers = null
         def isFirstLine = true
@@ -183,7 +293,7 @@ class Bactopia {
                 }
                 
                 // Process and collect the result
-                results << _processAccessionsLine(row, params)
+                results << _processAccessionsLine(row, params, EMPTY_PATHS)
             }
         }
         
@@ -195,9 +305,10 @@ class Bactopia {
      *
      * @param line The accession line data
      * @param params The workflow parameters
+     * @param EMPTY_PATHS Map of empty file paths
      * @return List containing the processed accession data
      */
-    public static List _processAccessionsLine(Map line, Map params) {
+    private static Map _processAccessionsLine(Map line, Map params, Map EMPTY_PATHS) {
         /* Parse line and determine if single end or paired reads*/
         def Map meta = [:]
 
@@ -207,7 +318,14 @@ class Bactopia {
             meta.runtype = "assembly_accession"
             meta.genome_size = params.genome_size
             meta.species = params.species
-            return [meta, [params.empty_r1], [params.empty_r2], params.empty_extra]
+            return [
+                'meta': meta,
+                'r1': [EMPTY_PATHS.empty_r1],
+                'r2': [EMPTY_PATHS.empty_r2],
+                'se': [EMPTY_PATHS.empty_se],
+                'lr': [EMPTY_PATHS.empty_ont],
+                'assembly': [EMPTY_PATHS.empty_assembly]
+            ]
         } else if (line.accession.startsWith('DRX') || line.accession.startsWith('ERX') || line.accession.startsWith('SRX')) {
             meta.id = line.accession
             meta.name = line.accession
@@ -218,7 +336,14 @@ class Bactopia {
 
             // if species is provided, use it, otherwise use the species from the FOFN
             meta.species = params.species ? params.species : line.species
-            return [meta, [params.empty_r1], [params.empty_r2], params.empty_extra]
+            return [
+                'meta': meta,
+                'r1': [EMPTY_PATHS.empty_r1],
+                'r2': [EMPTY_PATHS.empty_r2],
+                'se': [EMPTY_PATHS.empty_se],
+                'lr': [EMPTY_PATHS.empty_ont],
+                'assembly': [EMPTY_PATHS.empty_assembly]
+            ]
         } else {
             log.error(
                 "Invalid accession: ${line.accession} is not an accepted accession type. Accessions must " +
@@ -233,9 +358,10 @@ class Bactopia {
      * Process single accession.
      *
      * @param params The workflow parameters
+     * @param EMPTY_PATHS Map of empty file paths
      * @return List containing the processed accession data
      */
-    public static List processAccession(Map params) {
+    public static List<Map> processAccession(Map params, Map EMPTY_PATHS) {
         String accession = params.accession
         def Map meta = [:]
         meta.genome_size = params.genome_size
@@ -258,7 +384,14 @@ class Bactopia {
                     "accessions into an Experiment accession."
                 )
             }
-            return [[meta, [params.empty_r1], [params.empty_r2], params.empty_extra]]
+            return [[
+                'meta': meta,
+                'r1': [EMPTY_PATHS.empty_r1],
+                'r2': [EMPTY_PATHS.empty_r2],
+                'se': [EMPTY_PATHS.empty_se],
+                'lr': [EMPTY_PATHS.empty_ont],
+                'assembly': [EMPTY_PATHS.empty_assembly]
+            ]]
         }
         log.error("Accession cannot be empty, please provide a valid accession to continue.")
     }
