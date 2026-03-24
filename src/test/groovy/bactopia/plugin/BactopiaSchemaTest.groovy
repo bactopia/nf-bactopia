@@ -256,9 +256,10 @@ class BactopiaSchemaTest extends Specification {
         when: "cleaning parameters"
         def result = schema.cleanParameters(params)
 
-        then: "result is a new instance"
+        then: "result is a new instance with same content"
         !result.is(params)
-        result == params
+        result.param1 == 'value1'
+        result.param2 == 'value2'
     }
 
     def "cleanParameters handles empty map"() {

@@ -28,77 +28,42 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 @Slf4j
 class ChannelUtils {
 
-    private static boolean tupleModeDeprecationWarned = false
-
     /**
-     * Gather results from a channel by collecting outputs and mapping to a single tuple.
+     * Gather results from a channel of records by extracting a named field,
+     * collecting all values into a set, and wrapping with a meta map.
      * Follows nf-core pattern: detects if input is a channel or list, applies built-in operators.
      *
-     * Supports two modes:
-     * <ul>
-     *   <li><b>Tuple mode</b> (default): Destructures each item as [meta, output] and collects the output elements.</li>
-     *   <li><b>Record-aware mode</b> (field: 'name'): Extracts r[fieldName] from each record item.</li>
-     * </ul>
-     *
-     * @param options Optional named parameters: field (String) to enable record-aware mode,
-     *                args (String) extra arguments stored in output meta
-     * @param chResults Channel or List of tuples/records
-     * @param toolName The tool name to use as the id in the output meta map
-     * @return Channel or List containing a single tuple [meta, outputSet] where meta = [id: toolName, args: args]
-     * @throws IllegalArgumentException if chResults is null or toolName is null/empty
+     * @param chResults Channel or List of records
+     * @param field     The record field name to extract (e.g., 'tsv', 'report')
+     * @param meta      Output meta map (required). Must contain 'name'. All keys pass through
+     *                  as-is to output. Downstream modules null-guard their own keys.
+     * @return Channel or List containing a single tuple [meta, outputSet], or empty [] if no outputs
+     * @throws IllegalArgumentException if chResults is null, field is null/empty, meta is null, or meta.name is missing
      */
-    static Object gather(Map options = [:], Object chResults, String toolName) {
+    static Object gather(Object chResults, String field, Map meta) {
         // Input validation
         if (chResults == null) {
             throw new IllegalArgumentException("chResults cannot be null")
         }
-        if (toolName == null || toolName.trim().isEmpty()) {
-            throw new IllegalArgumentException("toolName cannot be null or empty")
+        if (field == null || field.trim().isEmpty()) {
+            throw new IllegalArgumentException("field cannot be null or empty")
         }
-
-        String args = options.args ?: ''
-        String field = options.field ?: null
-
-        if (!field) {
-            warnTupleModeDeprecation(toolName)
+        if (meta == null) {
+            throw new IllegalArgumentException("meta cannot be null")
+        }
+        if (!meta.name || meta.name.toString().trim().isEmpty()) {
+            throw new IllegalArgumentException("meta.name is required")
         }
 
         // Detect if input is a channel
         if (chResults instanceof DataflowReadChannel || chResults instanceof DataflowWriteChannel) {
-            if (field) {
-                // Record-aware mode: extract r[field] from each record
-                return chResults
-                    .collect { r -> r[field] }
-                    .map { output -> [[id: toolName, args: args], output.findAll { it != null }.toSet()] }
-                    .filter { _meta, outputs -> !outputs.isEmpty() }
-            } else {
-                // Tuple mode (deprecated): destructure as [meta, output]
-                return chResults
-                    .collect { _meta, output -> output }
-                    .map { output -> [[id: toolName, args: args], output.findAll { it != null }.toSet()] }
-                    .filter { _meta, outputs -> !outputs.isEmpty() }
-            }
+            return chResults
+                .collect { r -> r[field] }
+                .map { output -> [meta, output.findAll { it != null }.toSet()] }
+                .filter { _meta, outputs -> !outputs.isEmpty() }
         } else {
-            if (field) {
-                // Record-aware mode for lists
-                def outputs = chResults.collect { r -> r[field] }.findAll { it != null }.toSet()
-                return outputs.isEmpty() ? [] : [[id: toolName, args: args], outputs]
-            } else {
-                // Tuple mode (deprecated) for lists
-                def outputs = chResults.collect { row -> row[1] }.findAll { it != null }.toSet()
-                return outputs.isEmpty() ? [] : [[id: toolName, args: args], outputs]
-            }
-        }
-    }
-
-    /**
-     * Emit a one-time deprecation warning for tuple mode usage.
-     */
-    private static void warnTupleModeDeprecation(String toolName) {
-        if (!tupleModeDeprecationWarned) {
-            tupleModeDeprecationWarned = true
-            log.warn("gather() tuple mode is deprecated and will be removed in a future release. " +
-                     "Use record-aware mode instead: gather(ch, '${toolName}', field: '<output_name>')")
+            def outputs = chResults.collect { r -> r[field] }.findAll { it != null }.toSet()
+            return outputs.isEmpty() ? [] : [meta, outputs]
         }
     }
 

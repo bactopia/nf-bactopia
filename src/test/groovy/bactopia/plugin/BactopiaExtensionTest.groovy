@@ -2,6 +2,8 @@ package bactopia.plugin
 
 import nextflow.Session
 import spock.lang.Specification
+import spock.lang.TempDir
+import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
@@ -13,12 +15,16 @@ class BactopiaExtensionTest extends Specification {
     BactopiaExtension extension
     Session mockSession
 
+    @TempDir
+    Path tempDir
+
     def setup() {
         // Create a mock session with basic configuration
         mockSession = Mock(Session) {
             getParams() >> [
                 monochrome_logs: true,
-                outdir: '/tmp/test'
+                outdir: '/tmp/test',
+                empty_path: tempDir.toString()
             ]
             getConfig() >> [
                 navigate: { key -> [:] }
@@ -54,12 +60,12 @@ class BactopiaExtensionTest extends Specification {
         result.containsKey('samples')
     }
 
-    def 'bactopiaInputs should return samples as list'() {
-        when: 'bactopiaInputs is called'
+    def 'bactopiaInputs should report error for invalid runtype'() {
+        when: 'bactopiaInputs is called with invalid runtype'
         def result = extension.bactopiaInputs('bactopia')
 
-        then: 'samples should be a list'
-        result.samples instanceof List
+        then: 'hasErrors should be true since bactopia is not a valid runtype'
+        result.hasErrors == true
     }
 
     def 'bactopiaInputs should return hasErrors as boolean'() {
@@ -255,33 +261,34 @@ class BactopiaExtensionTest extends Specification {
     // Tests for gather()
 
     def 'gather should delegate to ChannelUtils'() {
-        given: 'a list of tuples'
-        def list = [
-            [[id: 'sample1'], 'output1.txt'],
-            [[id: 'sample2'], 'output2.txt']
+        given: 'a list of record-like maps'
+        def records = [
+            [tsv: 'output1.txt', meta: [id: 'sample1']],
+            [tsv: 'output2.txt', meta: [id: 'sample2']]
         ]
 
         when: 'gather is called'
-        def result = extension.gather(list, 'mytool')
+        def result = extension.gather(records, 'tsv', [name: 'mytool'])
 
         then: 'result should be returned from ChannelUtils'
         result != null
         result instanceof List
-        result[0] == [id: 'mytool', args: '']
+        result[0] == [name: 'mytool']
         result[1] instanceof Set
     }
 
-    def 'gather should accept toolName parameter'() {
-        given: 'a list of tuples'
-        def list = [
-            [[id: 'sample1'], 'output.txt']
+    def 'gather should pass through meta map'() {
+        given: 'a list of record-like maps'
+        def records = [
+            [tsv: 'output.txt']
         ]
 
-        when: 'gather is called with specific tool name'
-        def result = extension.gather(list, 'assembly')
+        when: 'gather is called with extra meta keys'
+        def result = extension.gather(records, 'tsv', [name: 'sccmec', args: '--lazy'])
 
-        then: 'meta should contain the tool name'
-        result[0].id == 'assembly'
+        then: 'meta should contain all provided keys'
+        result[0].name == 'sccmec'
+        result[0].args == '--lazy'
     }
 
     def 'gather should handle empty list'() {
@@ -289,7 +296,7 @@ class BactopiaExtensionTest extends Specification {
         def list = []
 
         when: 'gather is called'
-        def result = extension.gather(list, 'mytool')
+        def result = extension.gather(list, 'tsv', [name: 'mytool'])
 
         then: 'result should be empty due to empty guard'
         result == []

@@ -18,38 +18,75 @@ class ChannelUtilsTest extends Specification {
     // Note: Channel-based gather() tests require a full Nextflow pipeline context
     // and should be tested as integration tests (e.g., test-gather.nf)
 
-    def 'gather should handle list inputs'() {
-        given: 'A list of tuples'
-        def list = [
-            [[id: 'sample1'], 'output1.txt'],
-            [[id: 'sample2'], 'output2.txt'],
-            [[id: 'sample3'], 'output3.txt']
+    def 'gather should extract named field from records'() {
+        given: 'A list of record-like maps'
+        def records = [
+            [tsv: 'output1.tsv', meta: [id: 'sample1']],
+            [tsv: 'output2.tsv', meta: [id: 'sample2']],
+            [tsv: 'output3.tsv', meta: [id: 'sample3']]
         ]
 
-        when: 'gather is called with a tool name'
-        def result = ChannelUtils.gather(list, 'mytool')
+        when: 'gather is called'
+        def result = ChannelUtils.gather(records, 'tsv', [name: 'sccmec'])
 
-        then: 'result should be a single tuple with collected outputs'
-        result[0] == [id: 'mytool', args: '']
+        then: 'result should contain the extracted field values with meta passed through'
+        result[0] == [name: 'sccmec']
         result[1] instanceof Set
         result[1].size() == 3
-        result[1].contains('output1.txt')
-        result[1].contains('output2.txt')
-        result[1].contains('output3.txt')
+        result[1].contains('output1.tsv')
+        result[1].contains('output2.tsv')
+        result[1].contains('output3.tsv')
     }
 
-    def 'gather should create correct meta map with tool name'() {
-        given: 'A list of tuples'
-        def list = [
-            [[id: 'sample1'], 'output1.txt']
+    def 'gather should include args in meta when provided'() {
+        given: 'A list of record-like maps'
+        def records = [
+            [report: 'report1.txt'],
+            [report: 'report2.txt']
         ]
 
-        when: 'gather is called with a specific tool name'
-        def result = ChannelUtils.gather(list, 'assembly')
+        when: 'gather is called with name and args'
+        def result = ChannelUtils.gather(records, 'report', [name: 'ariba-report', args: '-C "$" --lazy-quotes'])
 
-        then: 'meta should have the correct id and default empty args'
-        result[0].id == 'assembly'
-        result[0].args == ''
+        then: 'result should have correct meta with args and extracted field values'
+        result[0] == [name: 'ariba-report', args: '-C "$" --lazy-quotes']
+        result[1] instanceof Set
+        result[1].size() == 2
+        result[1].contains('report1.txt')
+        result[1].contains('report2.txt')
+    }
+
+    def 'gather should pass through extra meta keys'() {
+        given: 'A list of record-like maps'
+        def records = [
+            [masked_aln: 'aln1.fa'],
+            [masked_aln: 'aln2.fa']
+        ]
+
+        when: 'gather is called with extra keys in meta'
+        def result = ChannelUtils.gather(records, 'masked_aln', [name: 'core-genome.masked.distance', process_name: 'snpdists-masked'])
+
+        then: 'all meta keys should pass through as-is'
+        result[0] == [name: 'core-genome.masked.distance', process_name: 'snpdists-masked']
+        result[1] instanceof Set
+        result[1].size() == 2
+    }
+
+    def 'gather should not add default keys to meta'() {
+        given: 'A list of record-like maps'
+        def records = [
+            [tsv: 'output.tsv']
+        ]
+
+        when: 'gather is called with only name in meta'
+        def result = ChannelUtils.gather(records, 'tsv', [name: 'sccmec'])
+
+        then: 'meta should contain only what was provided'
+        result[0] == [name: 'sccmec']
+        result[0].containsKey('name')
+        !result[0].containsKey('args')
+        !result[0].containsKey('process_name')
+        !result[0].containsKey('subdir')
     }
 
     def 'gather should handle empty list'() {
@@ -57,113 +94,13 @@ class ChannelUtilsTest extends Specification {
         def list = []
 
         when: 'gather is called'
-        def result = ChannelUtils.gather(list, 'mytool')
+        def result = ChannelUtils.gather(list, 'tsv', [name: 'mytool'])
 
-        then: 'result should be empty due to empty guard'
+        then: 'result should be empty'
         result == []
     }
 
-    def 'gather should include args parameter when provided'() {
-        given: 'A list of tuples'
-        def list = [
-            [[id: 'sample1'], 'output1.txt'],
-            [[id: 'sample2'], 'output2.txt']
-        ]
-
-        when: 'gather is called with args named parameter'
-        def result = ChannelUtils.gather(list, 'mytool', args: '--lazy-quotes')
-
-        then: 'result should include args in meta map'
-        result[0] == [id: 'mytool', args: '--lazy-quotes']
-        result[1] instanceof Set
-        result[1].size() == 2
-    }
-
-    def 'gather should handle empty args parameter'() {
-        given: 'A list of tuples'
-        def list = [
-            [[id: 'sample1'], 'output.txt']
-        ]
-
-        when: 'gather is called with explicit empty args'
-        def result = ChannelUtils.gather(list, 'mytool', args: '')
-
-        then: 'result should have empty args'
-        result[0] == [id: 'mytool', args: '']
-    }
-
-    def 'gather should handle complex args strings'() {
-        given: 'A list of tuples'
-        def list = [
-            [[id: 'sample1'], 'output.txt']
-        ]
-
-        when: 'gather is called with complex args'
-        def result = ChannelUtils.gather(list, 'mytool', args: '--option1 value1 --option2 value2')
-
-        then: 'result should preserve the args string'
-        result[0].args == '--option1 value1 --option2 value2'
-        result[0].id == 'mytool'
-    }
-
-    def 'gather should deduplicate outputs using Set'() {
-        given: 'A list with duplicate outputs'
-        def list = [
-            [[id: 'sample1'], 'output.txt'],
-            [[id: 'sample2'], 'output.txt'],
-            [[id: 'sample3'], 'other.txt']
-        ]
-
-        when: 'gather is called'
-        def result = ChannelUtils.gather(list, 'mytool')
-
-        then: 'result should contain unique outputs only'
-        result[1].size() == 2
-        result[1].contains('output.txt')
-        result[1].contains('other.txt')
-    }
-
-    // ---- Record-aware gather tests (field: option) ----
-
-    def 'gather with field should extract named field from records'() {
-        given: 'A list of record-like maps'
-        def records = [
-            [report: 'report1.txt', meta: [id: 'sample1']],
-            [report: 'report2.txt', meta: [id: 'sample2']],
-            [report: 'report3.txt', meta: [id: 'sample3']]
-        ]
-
-        when: 'gather is called with field option'
-        def result = ChannelUtils.gather(records, 'abricate', field: 'report')
-
-        then: 'result should contain the extracted field values'
-        result[0] == [id: 'abricate', args: '']
-        result[1] instanceof Set
-        result[1].size() == 3
-        result[1].contains('report1.txt')
-        result[1].contains('report2.txt')
-        result[1].contains('report3.txt')
-    }
-
-    def 'gather with field and args should include both options'() {
-        given: 'A list of record-like maps'
-        def records = [
-            [report: 'report1.txt'],
-            [report: 'report2.txt']
-        ]
-
-        when: 'gather is called with both field and args'
-        def result = ChannelUtils.gather(records, 'ariba-report', field: 'report', args: '-C "$" --lazy-quotes')
-
-        then: 'result should have correct meta with args and extracted field values'
-        result[0] == [id: 'ariba-report', args: '-C "$" --lazy-quotes']
-        result[1] instanceof Set
-        result[1].size() == 2
-        result[1].contains('report1.txt')
-        result[1].contains('report2.txt')
-    }
-
-    def 'gather with field should filter null field values'() {
+    def 'gather should filter null field values'() {
         given: 'A list of records where some have null field values'
         def records = [
             [report: 'report1.txt'],
@@ -171,31 +108,31 @@ class ChannelUtilsTest extends Specification {
             [report: 'report3.txt']
         ]
 
-        when: 'gather is called with field option'
-        def result = ChannelUtils.gather(records, 'mytool', field: 'report')
+        when: 'gather is called'
+        def result = ChannelUtils.gather(records, 'report', [name: 'mytool'])
 
         then: 'null values should be filtered out'
-        result[0] == [id: 'mytool', args: '']
+        result[0] == [name: 'mytool']
         result[1].size() == 2
         result[1].contains('report1.txt')
         result[1].contains('report3.txt')
     }
 
-    def 'gather with field should return empty for all-null field values'() {
+    def 'gather should return empty for all-null field values'() {
         given: 'A list of records where all field values are null'
         def records = [
             [report: null],
             [report: null]
         ]
 
-        when: 'gather is called with field option'
-        def result = ChannelUtils.gather(records, 'mytool', field: 'report')
+        when: 'gather is called'
+        def result = ChannelUtils.gather(records, 'report', [name: 'mytool'])
 
         then: 'result should be empty'
         result == []
     }
 
-    def 'gather with field should deduplicate outputs'() {
+    def 'gather should deduplicate outputs using Set'() {
         given: 'A list of records with duplicate field values'
         def records = [
             [report: 'same.txt'],
@@ -203,8 +140,8 @@ class ChannelUtilsTest extends Specification {
             [report: 'other.txt']
         ]
 
-        when: 'gather is called with field option'
-        def result = ChannelUtils.gather(records, 'mytool', field: 'report')
+        when: 'gather is called'
+        def result = ChannelUtils.gather(records, 'report', [name: 'mytool'])
 
         then: 'duplicate values should be deduplicated'
         result[1].size() == 2
@@ -212,7 +149,7 @@ class ChannelUtilsTest extends Specification {
         result[1].contains('other.txt')
     }
 
-    def 'gather with field should handle missing field key'() {
+    def 'gather should return empty for missing field key'() {
         given: 'A list of records missing the specified field'
         def records = [
             [other: 'value1'],
@@ -220,28 +157,10 @@ class ChannelUtilsTest extends Specification {
         ]
 
         when: 'gather is called with a field that does not exist'
-        def result = ChannelUtils.gather(records, 'mytool', field: 'report')
+        def result = ChannelUtils.gather(records, 'report', [name: 'mytool'])
 
         then: 'null lookups should be filtered, returning empty'
         result == []
-    }
-
-    def 'gather without field or args should work unchanged'() {
-        given: 'A list of tuples (legacy usage)'
-        def list = [
-            [[id: 'sample1'], 'output1.txt'],
-            [[id: 'sample2'], 'output2.txt']
-        ]
-
-        when: 'gather is called with no options'
-        def result = ChannelUtils.gather(list, 'mlst')
-
-        then: 'result should use default tuple mode with empty args'
-        result[0] == [id: 'mlst', args: '']
-        result[1] instanceof Set
-        result[1].size() == 2
-        result[1].contains('output1.txt')
-        result[1].contains('output2.txt')
     }
 
     // Note: Channel-based flattenPaths() tests require a full Nextflow pipeline context
@@ -381,69 +300,87 @@ class ChannelUtilsTest extends Specification {
         result.find { it[0].id == 'sample2' && it[1] == 'file2.txt' }
     }
 
-    def 'gather should handle various output types'() {
-        given: 'A list with different output types'
-        def list = [
-            [[id: 'sample1'], 'string_output'],
-            [[id: 'sample2'], 123],
-            [[id: 'sample3'], [key: 'value']]
-        ]
-
-        when: 'gather is called'
-        def result = ChannelUtils.gather(list, 'mytool')
-
-        then: 'all output types should be preserved'
-        result[1].size() == 3
-        result[1].contains('string_output')
-        result[1].contains(123)
-        result[1].contains([key: 'value'])
-    }
-
     // Error handling tests
 
     def 'gather should throw IllegalArgumentException when chResults is null'() {
         when: 'gather is called with null chResults'
-        ChannelUtils.gather(null, 'mytool')
+        ChannelUtils.gather(null, 'tsv', [name: 'mytool'])
 
         then: 'an IllegalArgumentException should be thrown'
         def ex = thrown(IllegalArgumentException)
         ex.message == 'chResults cannot be null'
     }
 
-    def 'gather should throw IllegalArgumentException when toolName is null'() {
+    def 'gather should throw IllegalArgumentException when field is null'() {
         given: 'A valid list'
-        def list = [[[id: 'sample1'], 'output.txt']]
+        def list = [[tsv: 'output.txt']]
 
-        when: 'gather is called with null toolName'
-        ChannelUtils.gather(list, null)
+        when: 'gather is called with null field'
+        ChannelUtils.gather(list, null, [name: 'mytool'])
 
         then: 'an IllegalArgumentException should be thrown'
         def ex = thrown(IllegalArgumentException)
-        ex.message == 'toolName cannot be null or empty'
+        ex.message == 'field cannot be null or empty'
     }
 
-    def 'gather should throw IllegalArgumentException when toolName is empty'() {
+    def 'gather should throw IllegalArgumentException when field is empty'() {
         given: 'A valid list'
-        def list = [[[id: 'sample1'], 'output.txt']]
+        def list = [[tsv: 'output.txt']]
 
-        when: 'gather is called with empty toolName'
-        ChannelUtils.gather(list, '')
+        when: 'gather is called with empty field'
+        ChannelUtils.gather(list, '', [name: 'mytool'])
 
         then: 'an IllegalArgumentException should be thrown'
         def ex = thrown(IllegalArgumentException)
-        ex.message == 'toolName cannot be null or empty'
+        ex.message == 'field cannot be null or empty'
     }
 
-    def 'gather should throw IllegalArgumentException when toolName is whitespace'() {
+    def 'gather should throw IllegalArgumentException when field is whitespace'() {
         given: 'A valid list'
-        def list = [[[id: 'sample1'], 'output.txt']]
+        def list = [[tsv: 'output.txt']]
 
-        when: 'gather is called with whitespace toolName'
-        ChannelUtils.gather(list, '   ')
+        when: 'gather is called with whitespace field'
+        ChannelUtils.gather(list, '   ', [name: 'mytool'])
 
         then: 'an IllegalArgumentException should be thrown'
         def ex = thrown(IllegalArgumentException)
-        ex.message == 'toolName cannot be null or empty'
+        ex.message == 'field cannot be null or empty'
+    }
+
+    def 'gather should throw IllegalArgumentException when meta is null'() {
+        given: 'A valid list'
+        def list = [[tsv: 'output.txt']]
+
+        when: 'gather is called with null meta'
+        ChannelUtils.gather(list, 'tsv', null)
+
+        then: 'an IllegalArgumentException should be thrown'
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'meta cannot be null'
+    }
+
+    def 'gather should throw IllegalArgumentException when meta.name is missing'() {
+        given: 'A valid list'
+        def list = [[tsv: 'output.txt']]
+
+        when: 'gather is called with meta missing name'
+        ChannelUtils.gather(list, 'tsv', [args: '--lazy'])
+
+        then: 'an IllegalArgumentException should be thrown'
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'meta.name is required'
+    }
+
+    def 'gather should throw IllegalArgumentException when meta.name is empty'() {
+        given: 'A valid list'
+        def list = [[tsv: 'output.txt']]
+
+        when: 'gather is called with empty meta.name'
+        ChannelUtils.gather(list, 'tsv', [name: '   '])
+
+        then: 'an IllegalArgumentException should be thrown'
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'meta.name is required'
     }
 
     def 'flattenPaths should throw IllegalArgumentException when channels is null'() {

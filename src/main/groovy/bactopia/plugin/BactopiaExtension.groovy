@@ -153,20 +153,17 @@ class BactopiaExtension extends PluginExtensionPoint {
     }
 
     /**
-     * Gather results from a channel by collecting outputs and mapping to a single tuple.
+     * Gather results from a channel of records by extracting a named field,
+     * collecting all values into a set, and wrapping with a meta map.
      *
-     * Supports two modes:
-     * - Tuple mode (default): Destructures each item as [meta, output] and collects the output elements.
-     * - Record-aware mode (field: 'name'): Extracts r[fieldName] from each record item.
-     *
-     * @param options Optional named parameters: field (String) for record-aware mode, args (String) for extra arguments
-     * @param chResults Channel or List of tuples/records
-     * @param toolName The tool name to use as the id in the output meta map
-     * @return Channel or List containing a single tuple [meta, outputSet] where meta = [id: toolName, args: args]
+     * @param chResults Channel or List of records
+     * @param field     The record field name to extract (e.g., 'tsv', 'report')
+     * @param meta      Output meta map (required). Must contain 'name'. All keys pass through as-is.
+     * @return Channel or List containing a single tuple [meta, outputSet]
      */
     @Function
-    Object gather(Map options = [:], Object chResults, String toolName) {
-        return ChannelUtils.gather(options, chResults, toolName)
+    Object gather(Object chResults, String field, Map meta) {
+        return ChannelUtils.gather(chResults, field, meta)
     }
 
     /**

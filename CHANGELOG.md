@@ -1,5 +1,24 @@
 # bactopia/nf-bactopia: Changelog
 
+## v1.1.0
+
+### `Changed`
+
+- **Breaking:** Simplified `gather()` API for Nextflow record types
+    - New signature: `gather(Object chResults, String field, Map meta)`
+    - `field` is now a required positional parameter specifying the record field to extract
+    - `meta` is a required Map that passes through as-is to output (must contain `name`)
+    - Output meta key changed from `id` to `name`
+    - Removed deprecated tuple mode entirely
+- Updated input return types from indexed tuples to named Maps for record type compatibility
+    - `collectBactopiaInputs()`, `processFOFN()`, `processAccessions()`, `processAccession()` now return Maps with named keys (`meta`, `r1`, `r2`, `se`, `lr`, `assembly`)
+    - `_collectInputs()` in BactopiaTools now requires `EMPTY_PATHS` parameter
+
+### `Fixed`
+
+- Fixed `BactopiaSchema.cleanParameters()` converting `LinkedHashMap` values to String instead of recursively cleaning them as nested Maps
+- Fixed all tests to align with record type refactor (map-based access, updated method signatures, `empty_path` parameter)
+
 ## v1.0.9
 
 ### `Added`

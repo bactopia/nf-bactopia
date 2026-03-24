@@ -78,7 +78,7 @@ Located in `src/main/groovy/bactopia/plugin/`:
 
 #### Channel & Sample Utilities (utils/)
 - **ChannelUtils**: Channel manipulation operations
-  - `gather()`: Collect and consolidate outputs
+  - `gather()`: Collect record field outputs into a single tuple
   - `flattenPaths()`: Mix channels and flatten file sets
 - **SampleUtils**: Sample data transformation operations
   - `formatSamples()`: Adapt tuple sizes based on data availability
@@ -150,10 +150,14 @@ All channel functions follow the **nf-core pattern**:
 
 ```groovy
 // Replaces this pattern:
-ch.collect{_meta, report -> report}.map{ report -> tuple([id:'tool'], report.toSet())}
+SCCMEC.out.tsv.collect{_meta, tsv -> tsv}.map{ tsv -> [[id:'sccmec'], tsv]}
 
 // With this:
-gather(ch, 'tool')
+gather(SCCMEC.out, 'tsv', [name: 'sccmec'])
+
+// With extra meta keys:
+gather(ARIBA_RUN.out, 'report', [name: "${db}-report", args: '-C "$" --lazy-quotes'])
+gather(MODULE.out, 'masked_aln', [name: 'core-genome.masked.distance', process_name: 'snpdists-masked'])
 ```
 
 ### Example: flattenPaths()
@@ -221,8 +225,8 @@ def myOperator() {
 
 ```groovy
 @Function
-Object gather(Object chResults, String toolName) {
-    return ChannelUtils.gather(chResults, toolName)
+Object gather(Object chResults, String field, Map meta) {
+    return ChannelUtils.gather(chResults, field, meta)
 }
 ```
 
@@ -232,7 +236,7 @@ Actual implementation lives in utility classes (`utils/` directory):
 
 ```groovy
 class ChannelUtils {
-    static Object gather(Object chResults, String toolName) {
+    static Object gather(Object chResults, String field, Map meta) {
         // Full implementation here
     }
 }

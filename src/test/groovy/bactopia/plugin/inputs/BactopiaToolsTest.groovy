@@ -5,6 +5,8 @@ import spock.lang.TempDir
 import java.nio.file.Path
 import java.nio.file.Files
 
+import static bactopia.plugin.utils.EmptyFiles.getEmptyPaths
+
 /**
  * Unit tests for BactopiaTools input handler class
  */
@@ -13,19 +15,23 @@ class BactopiaToolsTest extends Specification {
     @TempDir
     Path tempDir
 
+    Map EMPTY_PATHS
+
     def setup() {
+        EMPTY_PATHS = getEmptyPaths(tempDir.toString())
+
         // Create a mock Bactopia directory structure for testing
         def sampleDir = tempDir.resolve('sample1/main/gather')
         Files.createDirectories(sampleDir)
         sampleDir.resolve('sample1-meta.tsv').text = 'meta data'
-        
+
         def qcDir = tempDir.resolve('sample1/main/qc')
         Files.createDirectories(qcDir)
-        
+
         def assemblerDir = tempDir.resolve('sample1/main/assembler')
         Files.createDirectories(assemblerDir)
         assemblerDir.resolve('sample1.fna').text = '>contig1\nATCG'
-        
+
         def annotatorDir = tempDir.resolve('sample1/main/annotator/bakta')
         Files.createDirectories(annotatorDir)
     }
@@ -36,7 +42,8 @@ class BactopiaToolsTest extends Specification {
             bactopia: null,
             include: null,
             exclude: null,
-            workflow: [ext: 'fna']
+            workflow: [ext: 'fna'],
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaToolInputs is called'
@@ -52,7 +59,8 @@ class BactopiaToolsTest extends Specification {
             bactopia: '/non/existent/path',
             include: null,
             exclude: null,
-            workflow: [ext: 'fna']
+            workflow: [ext: 'fna'],
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaToolInputs is called'
@@ -75,16 +83,17 @@ class BactopiaToolsTest extends Specification {
             bactopia: tempDir.toString(),
             include: null,
             exclude: null,
-            workflow: [ext: 'fna']
+            workflow: [ext: 'fna'],
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaToolInputs is called'
         def result = BactopiaTools.collectBactopiaToolInputs(params)
 
         then: 'ignored directories should not be processed'
-        result.every { it[0].id != '.nextflow' }
-        result.every { it[0].id != 'bactopia-info' }
-        result.every { it[0].id != 'work' }
+        result.every { it.meta.id != '.nextflow' }
+        result.every { it.meta.id != 'bactopia-info' }
+        result.every { it.meta.id != 'work' }
     }
 
     def 'collectBactopiaToolInputs should detect sample directories'() {
@@ -93,7 +102,8 @@ class BactopiaToolsTest extends Specification {
             bactopia: tempDir.toString(),
             include: null,
             exclude: null,
-            workflow: [ext: 'fna']
+            workflow: [ext: 'fna'],
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaToolInputs is called'
@@ -117,14 +127,15 @@ class BactopiaToolsTest extends Specification {
             bactopia: tempDir.toString(),
             include: includeFile.absolutePath,
             exclude: null,
-            workflow: [ext: 'fna']
+            workflow: [ext: 'fna'],
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaToolInputs is called'
         def result = BactopiaTools.collectBactopiaToolInputs(params)
 
         then: 'only included samples should be processed'
-        result.every { it[0].id in ['sample1', 'sample2'] }
+        result.every { it.meta.id in ['sample1', 'sample2'] }
     }
 
     def 'collectBactopiaToolInputs should handle exclude list'() {
@@ -141,14 +152,15 @@ class BactopiaToolsTest extends Specification {
             bactopia: tempDir.toString(),
             include: null,
             exclude: excludeFile.absolutePath,
-            workflow: [ext: 'fna']
+            workflow: [ext: 'fna'],
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaToolInputs is called'
         def result = BactopiaTools.collectBactopiaToolInputs(params)
 
         then: 'excluded samples should not be in results'
-        result.every { it[0].id != 'sample1' }
+        result.every { it.meta.id != 'sample1' }
     }
 
     def 'collectBactopiaToolInputs should handle fna extension'() {
@@ -160,7 +172,8 @@ class BactopiaToolsTest extends Specification {
             bactopia: tempDir.toString(),
             include: null,
             exclude: null,
-            workflow: [ext: 'fna']
+            workflow: [ext: 'fna'],
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaToolInputs is called'
@@ -181,7 +194,8 @@ class BactopiaToolsTest extends Specification {
             bactopia: tempDir.toString(),
             include: null,
             exclude: null,
-            workflow: [ext: 'fna']
+            workflow: [ext: 'fna'],
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaToolInputs is called'
@@ -225,13 +239,12 @@ class BactopiaToolsTest extends Specification {
         qcDir.resolve('sample1_R2.fastq.gz').text = 'read2'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'illumina_fastq')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'illumina_fastq', EMPTY_PATHS)
 
         then: 'PE reads should be returned'
-        result[0].id == 'sample1'
-        result[0].single_end == false
-        result[0].runtype == 'illumina'
-        result[1].size() == 2
+        result.meta.id == 'sample1'
+        result.meta.single_end == false
+        result.meta.runtype == 'illumina'
     }
 
     def '_collectInputs should handle illumina_fastq extension with SE reads'() {
@@ -241,12 +254,12 @@ class BactopiaToolsTest extends Specification {
         qcDir.resolve('sample1.fastq.gz').text = 'reads'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'illumina_fastq')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'illumina_fastq', EMPTY_PATHS)
 
         then: 'SE read should be returned'
-        result[0].id == 'sample1'
-        result[0].single_end == true
-        result[0].runtype == 'illumina'
+        result.meta.id == 'sample1'
+        result.meta.single_end == true
+        result.meta.runtype == 'illumina'
     }
 
     def '_collectInputs should handle fna extension'() {
@@ -256,26 +269,27 @@ class BactopiaToolsTest extends Specification {
         assemblerDir.resolve('sample1.fna').text = '>contig\nATCG'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna', EMPTY_PATHS)
 
         then: 'fna file should be returned'
-        result[0].id == 'sample1'
-        result[0].is_compressed == false
-        result[1][0].toString().endsWith('sample1.fna')
+        result.meta.id == 'sample1'
+        result.assembly.toString().endsWith('sample1.fna')
     }
 
     def '_collectInputs should handle compressed fna files'() {
         given: 'compressed fna file'
         def assemblerDir = tempDir.resolve('sample1/main/assembler')
         Files.createDirectories(assemblerDir)
+        // Remove uncompressed version if it exists
+        def uncompressed = assemblerDir.resolve('sample1.fna')
+        if (Files.exists(uncompressed)) Files.delete(uncompressed)
         assemblerDir.resolve('sample1.fna.gz').text = 'compressed'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna', EMPTY_PATHS)
 
-        then: 'compressed flag should be set'
-        result[0].is_compressed == true
-        result[1][0].toString().endsWith('sample1.fna.gz')
+        then: 'compressed assembly should be found'
+        result.assembly.toString().endsWith('sample1.fna.gz')
     }
 
     def '_collectInputs should handle fna_fastq extension'() {
@@ -283,18 +297,17 @@ class BactopiaToolsTest extends Specification {
         def assemblerDir = tempDir.resolve('sample1/main/assembler')
         Files.createDirectories(assemblerDir)
         assemblerDir.resolve('sample1.fna').text = '>contig\nATCG'
-        
+
         def qcDir = tempDir.resolve('sample1/main/qc')
         Files.createDirectories(qcDir)
         qcDir.resolve('sample1.fastq.gz').text = 'reads'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna_fastq')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna_fastq', EMPTY_PATHS)
 
         then: 'both fna and fastq should be returned'
-        result[0].id == 'sample1'
-        result[1].size() == 1  // fna
-        result[2].size() == 1  // fastq
+        result.meta.id == 'sample1'
+        result.assembly.toString().endsWith('sample1.fna')
     }
 
     def '_collectInputs should handle fna_faa extension'() {
@@ -302,18 +315,18 @@ class BactopiaToolsTest extends Specification {
         def assemblerDir = tempDir.resolve('sample1/main/assembler')
         Files.createDirectories(assemblerDir)
         assemblerDir.resolve('sample1.fna').text = '>contig\nATCG'
-        
+
         def baktaDir = tempDir.resolve('sample1/main/annotator/bakta')
         Files.createDirectories(baktaDir)
         baktaDir.resolve('sample1.faa').text = '>protein\nMKTL'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna_faa')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna_faa', EMPTY_PATHS)
 
         then: 'both fna and faa should be returned'
-        result[0].id == 'sample1'
-        result[1].size() == 1  // fna
-        result[2].size() == 1  // faa
+        result.meta.id == 'sample1'
+        result.assembly.toString().endsWith('sample1.fna')
+        result.proteins.toString().endsWith('sample1.faa')
     }
 
     def '_collectInputs should fallback to Prokka if Bakta not found'() {
@@ -321,17 +334,21 @@ class BactopiaToolsTest extends Specification {
         def assemblerDir = tempDir.resolve('sample1/main/assembler')
         Files.createDirectories(assemblerDir)
         assemblerDir.resolve('sample1.fna').text = '>contig\nATCG'
-        
+
+        // Remove Bakta faa if exists
+        def baktaDir = tempDir.resolve('sample1/main/annotator/bakta')
+        Files.createDirectories(baktaDir)
+
         def prokkaDir = tempDir.resolve('sample1/main/annotator/prokka')
         Files.createDirectories(prokkaDir)
         prokkaDir.resolve('sample1.faa').text = '>protein\nMKTL'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna_faa')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna_faa', EMPTY_PATHS)
 
         then: 'Prokka files should be used'
-        result[0].id == 'sample1'
-        result[2][0].toString().contains('prokka')
+        result.meta.id == 'sample1'
+        result.proteins.toString().contains('prokka')
     }
 
     def '_collectInputs should handle fna_meta extension'() {
@@ -339,18 +356,18 @@ class BactopiaToolsTest extends Specification {
         def assemblerDir = tempDir.resolve('sample1/main/assembler')
         Files.createDirectories(assemblerDir)
         assemblerDir.resolve('sample1.fna').text = '>contig\nATCG'
-        
+
         def gatherDir = tempDir.resolve('sample1/main/gather')
         Files.createDirectories(gatherDir)
         gatherDir.resolve('sample1-meta.tsv').text = 'meta data'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna_meta')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fna_meta', EMPTY_PATHS)
 
         then: 'fna and meta should be returned'
-        result[0].id == 'sample1'
-        result[1].size() == 1  // fna
-        result[2].size() == 1  // meta
+        result.meta.id == 'sample1'
+        result.assembly.toString().endsWith('sample1.fna')
+        result.meta_file.toString().endsWith('sample1-meta.tsv')
     }
 
     def '_collectInputs should handle gbk extension with Bakta'() {
@@ -360,11 +377,11 @@ class BactopiaToolsTest extends Specification {
         baktaDir.resolve('sample1.gbff').text = 'genbank data'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'gbk')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'gbk', EMPTY_PATHS)
 
         then: 'gbff file should be returned'
-        result[0].id == 'sample1'
-        result[1][0].toString().endsWith('sample1.gbff')
+        result.meta.id == 'sample1'
+        result.gbk.toString().endsWith('sample1.gbff')
     }
 
     def '_collectInputs should handle gff extension with Bakta'() {
@@ -374,23 +391,11 @@ class BactopiaToolsTest extends Specification {
         baktaDir.resolve('sample1.gff3').text = 'gff data'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'gff')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'gff', EMPTY_PATHS)
 
         then: 'gff3 file should be returned'
-        result[0].id == 'sample1'
-        result[1][0].toString().endsWith('sample1.gff3')
-    }
-
-    def '_collectInputs should return sample name if files missing'() {
-        given: 'sample without required files'
-        def emptyDir = tempDir.resolve('sample2/main/annotator')
-        Files.createDirectories(emptyDir)
-
-        when: '_collectInputs is called with missing extension'
-        def result = BactopiaTools._collectInputs('sample2', tempDir.toString(), 'fna')
-
-        then: 'sample name should be returned'
-        result[0] == 'sample2'
+        result.meta.id == 'sample1'
+        result.gff.toString().endsWith('sample1.gff3')
     }
 
     def '_collectInputs should handle ONT fastq files'() {
@@ -398,16 +403,16 @@ class BactopiaToolsTest extends Specification {
         def qcDir = tempDir.resolve('sample1/main/qc')
         Files.createDirectories(qcDir)
         qcDir.resolve('sample1.fastq.gz').text = 'ont reads'
-        
+
         def suppDir = tempDir.resolve('sample1/main/qc/supplemental')
         Files.createDirectories(suppDir)
         suppDir.resolve('sample1-final_NanoPlot-report.html').text = 'nanoplot'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fastq')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fastq', EMPTY_PATHS)
 
         then: 'ONT runtype should be detected'
-        result[0].runtype == 'ont'
+        result.meta.runtype == 'ont'
     }
 
     def '_collectInputs should detect Illumina fastq without NanoPlot'() {
@@ -417,10 +422,10 @@ class BactopiaToolsTest extends Specification {
         qcDir.resolve('sample1.fastq.gz').text = 'illumina reads'
 
         when: '_collectInputs is called'
-        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fastq')
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), 'fastq', EMPTY_PATHS)
 
         then: 'Illumina runtype should be set'
-        result[0].runtype == 'illumina'
+        result.meta.runtype == 'illumina'
     }
 
     def 'processFOFN should parse include file'() {

@@ -248,8 +248,8 @@ class BactopiaSchema {
                 // Cast Duration to String
                 new_params.replace(p.key, p['value'].toString())
             } else if (p['value'] instanceof LinkedHashMap) {
-                // Cast LinkedHashMap to String
-                new_params.replace(p.key, p['value'].toString())
+                // Recursively clean LinkedHashMap as a nested Map
+                new_params.replace(p.key, cleanParameters(p['value'] as Map))
             } else if (p['value'] instanceof Path) {
                 // Cast Path objects to String
                 new_params.replace(p.key, p['value'].toString())

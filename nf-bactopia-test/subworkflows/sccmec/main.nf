@@ -3,6 +3,7 @@
 //
 include { SCCMEC as SCCMEC_MODULE } from '../../modules/sccmec/main'
 include { CSVTK_CONCAT } from '../../modules/csvtk/concat/main'
+include { gather } from 'plugin/nf-bactopia'
 
 workflow SCCMEC {
     take:
@@ -15,8 +16,7 @@ workflow SCCMEC {
     ch_versions = ch_versions.mix(SCCMEC_MODULE.out.versions.first())
 
     // Merge results
-    SCCMEC_MODULE.out.tsv.collect{_meta, tsv -> tsv}.map{ tsv -> [[id:'sccmec'], tsv]}.set{ ch_merge_sccmec }
-    CSVTK_CONCAT(ch_merge_sccmec, 'tsv', 'tsv')
+    CSVTK_CONCAT(gather(SCCMEC_MODULE.out, 'tsv', [name: 'sccmec']), 'tsv', 'tsv')
     ch_versions = ch_versions.mix(CSVTK_CONCAT.out.versions)
 
     emit:

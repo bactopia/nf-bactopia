@@ -4,6 +4,8 @@ import spock.lang.Specification
 import spock.lang.TempDir
 import java.nio.file.Path
 
+import static bactopia.plugin.utils.EmptyFiles.getEmptyPaths
+
 /**
  * Unit tests for Bactopia input handler class
  */
@@ -11,6 +13,12 @@ class BactopiaTest extends Specification {
 
     @TempDir
     Path tempDir
+
+    Map EMPTY_PATHS
+
+    def setup() {
+        EMPTY_PATHS = getEmptyPaths(tempDir.toString())
+    }
 
     def 'collectBactopiaInputs should handle paired-end runtype'() {
         given: 'parameters for paired-end reads'
@@ -20,7 +28,7 @@ class BactopiaTest extends Specification {
             r2: '/path/to/read2.fastq.gz',
             genome_size: 5000000,
             species: 'Test species',
-            empty_extra: []
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaInputs is called'
@@ -28,14 +36,14 @@ class BactopiaTest extends Specification {
 
         then: 'result should contain properly formatted paired-end data'
         result.size() == 1
-        result[0][0].id == 'test_sample'
-        result[0][0].name == 'test_sample'
-        result[0][0].runtype == 'paired-end'
-        result[0][0].genome_size == 5000000
-        result[0][0].species == 'Test species'
-        result[0][1] == ['/path/to/read1.fastq.gz']
-        result[0][2] == ['/path/to/read2.fastq.gz']
-        result[0][3] == []
+        result[0].meta.id == 'test_sample'
+        result[0].meta.name == 'test_sample'
+        result[0].meta.runtype == 'paired-end'
+        result[0].meta.genome_size == 5000000
+        result[0].meta.species == 'Test species'
+        result[0].r1 == ['/path/to/read1.fastq.gz']
+        result[0].r2 == ['/path/to/read2.fastq.gz']
+        result[0].se == [EMPTY_PATHS.empty_se]
     }
 
     def 'collectBactopiaInputs should handle single-end runtype'() {
@@ -43,10 +51,9 @@ class BactopiaTest extends Specification {
         def params = [
             sample: 'test_sample',
             se: '/path/to/read.fastq.gz',
-            empty_r2: [],
             genome_size: 5000000,
             species: 'Test species',
-            empty_extra: []
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaInputs is called'
@@ -54,9 +61,9 @@ class BactopiaTest extends Specification {
 
         then: 'result should contain properly formatted single-end data'
         result.size() == 1
-        result[0][0].runtype == 'single-end'
-        result[0][1] == ['/path/to/read.fastq.gz']
-        result[0][2] == [[]]
+        result[0].meta.runtype == 'single-end'
+        result[0].se == ['/path/to/read.fastq.gz']
+        result[0].r1 == [EMPTY_PATHS.empty_r1]
     }
 
     def 'collectBactopiaInputs should handle hybrid runtype'() {
@@ -67,7 +74,8 @@ class BactopiaTest extends Specification {
             r2: '/path/to/read2.fastq.gz',
             ont: '/path/to/ont.fastq.gz',
             genome_size: 5000000,
-            species: 'Test species'
+            species: 'Test species',
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaInputs is called'
@@ -75,10 +83,10 @@ class BactopiaTest extends Specification {
 
         then: 'result should contain properly formatted hybrid data'
         result.size() == 1
-        result[0][0].runtype == 'hybrid'
-        result[0][1] == ['/path/to/read1.fastq.gz']
-        result[0][2] == ['/path/to/read2.fastq.gz']
-        result[0][3] == '/path/to/ont.fastq.gz'
+        result[0].meta.runtype == 'hybrid'
+        result[0].r1 == ['/path/to/read1.fastq.gz']
+        result[0].r2 == ['/path/to/read2.fastq.gz']
+        result[0].lr == ['/path/to/ont.fastq.gz']
     }
 
     def 'collectBactopiaInputs should handle short_polish runtype'() {
@@ -89,7 +97,8 @@ class BactopiaTest extends Specification {
             r2: '/path/to/read2.fastq.gz',
             ont: '/path/to/ont.fastq.gz',
             genome_size: 5000000,
-            species: 'Test species'
+            species: 'Test species',
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaInputs is called'
@@ -97,8 +106,8 @@ class BactopiaTest extends Specification {
 
         then: 'result should contain properly formatted short_polish data'
         result.size() == 1
-        result[0][0].runtype == 'short_polish'
-        result[0][3] == '/path/to/ont.fastq.gz'
+        result[0].meta.runtype == 'short_polish'
+        result[0].lr == ['/path/to/ont.fastq.gz']
     }
 
     def 'collectBactopiaInputs should handle assembly runtype'() {
@@ -106,10 +115,9 @@ class BactopiaTest extends Specification {
         def params = [
             sample: 'test_sample',
             assembly: '/path/to/assembly.fasta',
-            empty_r1: [],
-            empty_r2: [],
             genome_size: 5000000,
-            species: 'Test species'
+            species: 'Test species',
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaInputs is called'
@@ -117,10 +125,10 @@ class BactopiaTest extends Specification {
 
         then: 'result should contain properly formatted assembly data'
         result.size() == 1
-        result[0][0].runtype == 'assembly'
-        result[0][1] == [[]]
-        result[0][2] == [[]]
-        result[0][3] == '/path/to/assembly.fasta'
+        result[0].meta.runtype == 'assembly'
+        result[0].r1 == [EMPTY_PATHS.empty_r1]
+        result[0].r2 == [EMPTY_PATHS.empty_r2]
+        result[0].assembly == ['/path/to/assembly.fasta']
     }
 
     def 'collectBactopiaInputs should handle ont runtype'() {
@@ -128,10 +136,9 @@ class BactopiaTest extends Specification {
         def params = [
             sample: 'test_sample',
             ont: '/path/to/ont.fastq.gz',
-            empty_r2: [],
             genome_size: 5000000,
             species: 'Test species',
-            empty_extra: []
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaInputs is called'
@@ -139,9 +146,9 @@ class BactopiaTest extends Specification {
 
         then: 'result should contain properly formatted ONT data'
         result.size() == 1
-        result[0][0].runtype == 'ont'
-        result[0][1] == ['/path/to/ont.fastq.gz']
-        result[0][2] == [[]]
+        result[0].meta.runtype == 'ont'
+        result[0].lr == ['/path/to/ont.fastq.gz']
+        result[0].r1 == [EMPTY_PATHS.empty_r1]
     }
 
     def 'handleMultipleFqs should split comma-separated file paths'() {
@@ -180,21 +187,18 @@ sample2\tsingle-end\t/path/to/se.fq\t\t4500000\tS. aureus'''
         def params = [
             samples: fofnFile.absolutePath,
             genome_size: null,
-            species: null,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            species: null
         ]
 
         when: 'processFOFN is called'
-        def result = Bactopia.processFOFN(params)
+        def result = Bactopia.processFOFN(params, EMPTY_PATHS)
 
         then: 'result should contain parsed samples'
         result.size() == 2
-        result[0][0].id == 'sample1'
-        result[0][0].runtype == 'paired-end'
-        result[1][0].id == 'sample2'
-        result[1][0].runtype == 'single-end'
+        result[0].meta.id == 'sample1'
+        result[0].meta.runtype == 'paired-end'
+        result[1].meta.id == 'sample2'
+        result[1].meta.runtype == 'single-end'
     }
 
     def 'processFOFN should skip empty lines'() {
@@ -208,14 +212,11 @@ sample2\tsingle-end\t/path/to/se.fq'''
         def params = [
             samples: fofnFile.absolutePath,
             genome_size: null,
-            species: null,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            species: null
         ]
 
         when: 'processFOFN is called'
-        def result = Bactopia.processFOFN(params)
+        def result = Bactopia.processFOFN(params, EMPTY_PATHS)
 
         then: 'empty lines should be skipped'
         result.size() == 2
@@ -230,17 +231,14 @@ sample1\tpaired-end\t/path/to/r1.fq\t3000000'''
         def params = [
             samples: fofnFile.absolutePath,
             genome_size: 5000000,
-            species: null,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            species: null
         ]
 
         when: 'processFOFN is called'
-        def result = Bactopia.processFOFN(params)
+        def result = Bactopia.processFOFN(params, EMPTY_PATHS)
 
         then: 'params genome_size should override FOFN genome_size'
-        result[0][0].genome_size == 5000000
+        result[0].meta.genome_size == 5000000
     }
 
     def 'processFOFN should handle merge-pe runtype'() {
@@ -252,18 +250,15 @@ sample1\tmerge-pe\t/path/r1_1.fq,/path/r1_2.fq\t/path/r2_1.fq,/path/r2_2.fq'''
         def params = [
             samples: fofnFile.absolutePath,
             genome_size: null,
-            species: null,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            species: null
         ]
 
         when: 'processFOFN is called'
-        def result = Bactopia.processFOFN(params)
+        def result = Bactopia.processFOFN(params, EMPTY_PATHS)
 
         then: 'multiple files should be handled correctly'
-        result[0][1].size() == 2
-        result[0][2].size() == 2
+        result[0].r1.size() == 2
+        result[0].r2.size() == 2
     }
 
     def 'processAccessions should parse accessions TSV'() {
@@ -276,21 +271,18 @@ SRX12345678\tillumina\t5000000\tE. coli'''
         def params = [
             accessions: accessionsFile.absolutePath,
             genome_size: null,
-            species: null,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            species: null
         ]
 
         when: 'processAccessions is called'
-        def result = Bactopia.processAccessions(params)
+        def result = Bactopia.processAccessions(params, EMPTY_PATHS)
 
         then: 'accessions should be parsed correctly'
         result.size() == 2
-        result[0][0].id == 'GCF_000001405'
-        result[0][0].runtype == 'assembly_accession'
-        result[1][0].id == 'SRX12345678'
-        result[1][0].runtype == 'sra_accession'
+        result[0].meta.id == 'GCF_000001405'
+        result[0].meta.runtype == 'assembly_accession'
+        result[1].meta.id == 'SRX12345678'
+        result[1].meta.runtype == 'sra_accession'
     }
 
     def 'processAccession should handle GCF assembly accession'() {
@@ -299,20 +291,17 @@ SRX12345678\tillumina\t5000000\tE. coli'''
             accession: 'GCF_000001405.39',
             genome_size: 5000000,
             species: 'Human',
-            ont: false,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            ont: false
         ]
 
         when: 'processAccession is called'
-        def result = Bactopia.processAccession(params)
+        def result = Bactopia.processAccession(params, EMPTY_PATHS)
 
         then: 'result should contain assembly accession data'
         result.size() == 1
-        result[0][0].id == 'GCF_000001405'
-        result[0][0].name == 'GCF_000001405'
-        result[0][0].runtype == 'assembly_accession'
+        result[0].meta.id == 'GCF_000001405'
+        result[0].meta.name == 'GCF_000001405'
+        result[0].meta.runtype == 'assembly_accession'
     }
 
     def 'processAccession should handle GCA assembly accession'() {
@@ -321,18 +310,15 @@ SRX12345678\tillumina\t5000000\tE. coli'''
             accession: 'GCA_000001405.15',
             genome_size: 5000000,
             species: 'Human',
-            ont: false,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            ont: false
         ]
 
         when: 'processAccession is called'
-        def result = Bactopia.processAccession(params)
+        def result = Bactopia.processAccession(params, EMPTY_PATHS)
 
         then: 'result should contain assembly accession data'
-        result[0][0].id == 'GCA_000001405'
-        result[0][0].runtype == 'assembly_accession'
+        result[0].meta.id == 'GCA_000001405'
+        result[0].meta.runtype == 'assembly_accession'
     }
 
     def 'processAccession should handle SRA experiment accessions'() {
@@ -341,18 +327,15 @@ SRX12345678\tillumina\t5000000\tE. coli'''
             accession: 'SRX12345678',
             genome_size: 5000000,
             species: 'E. coli',
-            ont: false,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            ont: false
         ]
 
         when: 'processAccession is called'
-        def result = Bactopia.processAccession(params)
+        def result = Bactopia.processAccession(params, EMPTY_PATHS)
 
         then: 'result should contain SRA accession data'
-        result[0][0].id == 'SRX12345678'
-        result[0][0].runtype == 'sra_accession'
+        result[0].meta.id == 'SRX12345678'
+        result[0].meta.runtype == 'sra_accession'
     }
 
     def 'processAccession should handle ONT SRA accession'() {
@@ -361,17 +344,14 @@ SRX12345678\tillumina\t5000000\tE. coli'''
             accession: 'ERX12345678',
             genome_size: 5000000,
             species: 'E. coli',
-            ont: true,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            ont: true
         ]
 
         when: 'processAccession is called'
-        def result = Bactopia.processAccession(params)
+        def result = Bactopia.processAccession(params, EMPTY_PATHS)
 
         then: 'result should contain ONT SRA accession data'
-        result[0][0].runtype == 'sra_accession_ont'
+        result[0].meta.runtype == 'sra_accession_ont'
     }
 
     def 'processAccession should handle DRX accession'() {
@@ -380,18 +360,15 @@ SRX12345678\tillumina\t5000000\tE. coli'''
             accession: 'DRX12345678',
             genome_size: 5000000,
             species: 'E. coli',
-            ont: false,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            ont: false
         ]
 
         when: 'processAccession is called'
-        def result = Bactopia.processAccession(params)
+        def result = Bactopia.processAccession(params, EMPTY_PATHS)
 
         then: 'result should contain DRX accession data'
-        result[0][0].id == 'DRX12345678'
-        result[0][0].runtype == 'sra_accession'
+        result[0].meta.id == 'DRX12345678'
+        result[0].meta.runtype == 'sra_accession'
     }
 
     def 'collectBactopiaInputs should delegate to processFOFN for is_fofn runtype'() {
@@ -404,9 +381,7 @@ sample1\tsingle-end\t/path/to/r1.fq'''
             samples: fofnFile.absolutePath,
             genome_size: null,
             species: null,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaInputs is called with is_fofn'
@@ -414,7 +389,7 @@ sample1\tsingle-end\t/path/to/r1.fq'''
 
         then: 'result should be from processFOFN'
         result.size() == 1
-        result[0][0].id == 'sample1'
+        result[0].meta.id == 'sample1'
     }
 
     def 'collectBactopiaInputs should delegate to processAccessions for is_accessions runtype'() {
@@ -427,9 +402,7 @@ GCF_000001405.1'''
             accessions: accessionsFile.absolutePath,
             genome_size: null,
             species: null,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaInputs is called with is_accessions'
@@ -437,7 +410,7 @@ GCF_000001405.1'''
 
         then: 'result should be from processAccessions'
         result.size() == 1
-        result[0][0].runtype == 'assembly_accession'
+        result[0].meta.runtype == 'assembly_accession'
     }
 
     def 'collectBactopiaInputs should delegate to processAccession for is_accession runtype'() {
@@ -447,9 +420,7 @@ GCF_000001405.1'''
             genome_size: null,
             species: null,
             ont: false,
-            empty_r1: [],
-            empty_r2: [],
-            empty_extra: []
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaInputs is called with is_accession'
@@ -457,7 +428,7 @@ GCF_000001405.1'''
 
         then: 'result should be from processAccession'
         result.size() == 1
-        result[0][0].runtype == 'assembly_accession'
+        result[0].meta.runtype == 'assembly_accession'
     }
 
     def 'meta map should contain all required fields'() {
@@ -468,17 +439,17 @@ GCF_000001405.1'''
             r2: '/path/to/r2.fq',
             genome_size: 5000000,
             species: 'Test species',
-            empty_extra: []
+            empty_path: tempDir.toString()
         ]
 
         when: 'collectBactopiaInputs is called'
         def result = Bactopia.collectBactopiaInputs(params, 'paired-end')
 
         then: 'meta should contain all required fields'
-        result[0][0].containsKey('id')
-        result[0][0].containsKey('name')
-        result[0][0].containsKey('runtype')
-        result[0][0].containsKey('genome_size')
-        result[0][0].containsKey('species')
+        result[0].meta.containsKey('id')
+        result[0].meta.containsKey('name')
+        result[0].meta.containsKey('runtype')
+        result[0].meta.containsKey('genome_size')
+        result[0].meta.containsKey('species')
     }
 }
