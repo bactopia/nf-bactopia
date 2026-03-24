@@ -14,6 +14,7 @@ test:
 
 # Install the plugin into local nextflow plugins dir
 install:
+	rm -rf ~/.nextflow/plugins/nf-bactopia-$(shell grep "^version" build.gradle | sed "s/version = '//;s/'//")
 	./gradlew install
 
 # Publish the plugin
