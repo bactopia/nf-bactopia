@@ -191,26 +191,15 @@ class BactopiaExtension extends PluginExtensionPoint {
     }
 
     /**
-     * Filter tuples where at least one element after the meta (index 0) is not null.
-     * Removes tuples where all data elements are null (e.g., samples with no valid reads/assemblies).
+     * Filter records where at least one of the specified fields is non-null.
+     * Removes records where all checked fields are null (e.g., samples with no valid reads/assemblies).
      *
-     * @param input Channel or List of tuples containing [meta, data1, data2, ...]
-     * @return Channel or List with only tuples that have at least one non-null data element
+     * @param input  Channel or List of records
+     * @param fields List of field names to check for non-null values
+     * @return Channel or List with only records that have at least one non-null field
      */
     @Function
-    Object filterWithData(Object input) {
-        return ChannelUtils.filterWithData(input)
-    }
-
-    /**
-     * Filter tuples where the first element after the meta (index 0) is not null.
-     * Removes tuples where the primary data element is null. (E.g. the given species was not found.)
-     *
-     * @param input Channel or List of tuples containing [meta, species_found, data2, ...]
-     * @return Channel or List with only tuples that have at least one non-null data element
-     */
-    @Function
-    Object filterMerlin(Object input) {
-        return ChannelUtils.filterMerlin(input)
+    Object filterWithData(Object input, List<String> fields) {
+        return ChannelUtils.filterWithData(input, fields)
     }
 }

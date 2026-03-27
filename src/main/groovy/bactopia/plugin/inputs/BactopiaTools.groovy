@@ -174,14 +174,15 @@ class BactopiaTools {
      * @return Map containing collected inputs or error message
      */
     private static Map _collectInputs(String sample, String dir, String extension, Map EMPTY_PATHS) {
-        def Map PATHS = [:]
-        PATHS.blastdb = "annotator"
-        PATHS.fastq = "qc"
-        PATHS.fna = "assembler"
-        PATHS.faa = "annotator"
-        PATHS.gbk = "annotator"
-        PATHS.gff = "annotator"
-        PATHS.meta = "gather"
+        def Map PATHS  = [:]
+        PATHS.blastdb  = "annotator"
+        PATHS.fastq    = "qc"
+        PATHS.fna      = "assembler"
+        PATHS.anno_fna = "annotator"
+        PATHS.faa      = "annotator"
+        PATHS.gbk      = "annotator"
+        PATHS.gff      = "annotator"
+        PATHS.meta     = "gather"
 
         // Set up the paths for each extension
         def String baseDir = "${dir}/${sample}/main/"
@@ -208,6 +209,7 @@ class BactopiaTools {
             'ont': fileExists(se) && ont ? se : EMPTY_PATHS.empty_ont,
             'assembly': fileExists(fna) ? fna : fileExists("${fna}.gz") ? "${fna}.gz" : EMPTY_PATHS.empty_assembly,
             'proteins': EMPTY_PATHS.empty_proteins,
+            'anno_fna': EMPTY_PATHS.empty_assembly,
             'gbk': EMPTY_PATHS.empty_gbk,
             'gff': EMPTY_PATHS.empty_gff,
             'blastdb': EMPTY_PATHS.empty_blastdb,
@@ -216,6 +218,7 @@ class BactopiaTools {
 
         // Handle annotations
         inputs['proteins'] = _findAnnotationFile(baseDir, PATHS['faa'], sample, 'faa', 'faa') ?: inputs['proteins']
+        inputs['anno_fna'] = _findAnnotationFile(baseDir, PATHS['anno_fna'], sample, 'fna', 'fna') ?: inputs['anno_fna']
         inputs['gff'] = _findAnnotationFile(baseDir, PATHS['gff'], sample, 'gff3', 'gff') ?: inputs['gff']
         inputs['gbk'] = _findAnnotationFile(baseDir, PATHS['gbk'], sample, 'gbff', 'gbk') ?: inputs['gbk']
 

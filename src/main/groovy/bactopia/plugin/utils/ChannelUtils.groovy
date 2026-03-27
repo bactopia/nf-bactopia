@@ -166,54 +166,38 @@ class ChannelUtils {
     }
 
     /**
-     * Filter tuples where at least one element after the meta (index 0) is not null.
-     * Removes tuples where all data elements are null (e.g., samples with no valid reads/assemblies).
-     * Follows nf-core pattern: detects if input is a channel or list, applies built-in operators.
+     * Filter records where at least one of the specified fields is non-null.
+     * Filters records where at least one of the specified fields is non-null, then projects
+     * the record down to only {@code _meta} (mapped from {@code meta}) plus the requested fields.
+     * This prevents downstream processes from receiving extra record fields that cause type errors.
      *
-     * @param input Channel or List of tuples containing [meta, data1, data2, ...]
-     * @return Channel or List with only tuples that have at least one non-null data element
-     * @throws IllegalArgumentException if input is null
+     * @param input  Channel or List of records
+     * @param fields List of field names to check for non-null values and include in output
+     * @return Channel or List of projected records containing only _meta + requested fields
+     * @throws IllegalArgumentException if input is null or fields is null/empty
      */
-    static Object filterWithData(Object input) {
-        // Input validation
+    static Object filterWithData(Object input, List<String> fields) {
         if (input == null) {
             throw new IllegalArgumentException("input cannot be null")
         }
-
-        // Detect if input is a channel
-        if (input instanceof DataflowReadChannel || input instanceof DataflowWriteChannel) {
-            // Apply built-in filter operator to the channel
-            return input.filter { row -> row[1..-1].any { it != null } }
-        } else {
-            // Input is a list - process directly
-            return input.findAll { row -> row[1..-1].any { it != null } }
-        }
-    }
-
-    /**
-     * Filter tuples where the second element (index 1) is not null.
-     * Removes tuples where the primary data element is null.
-     * Follows nf-core pattern: detects if input is a channel or list, applies built-in operators.
-     *
-     * Note: This is a specialized version of filterWithData for Merlin tool outputs.
-     *
-     * @param input Channel or List of tuples containing [meta, data, ...]
-     * @return Channel or List with only tuples that have a non-null second element
-     * @throws IllegalArgumentException if input is null
-     */
-    static Object filterMerlin(Object input) {
-        // Input validation
-        if (input == null) {
-            throw new IllegalArgumentException("input cannot be null")
+        if (fields == null || fields.isEmpty()) {
+            throw new IllegalArgumentException("fields cannot be null or empty")
         }
 
-        // Detect if input is a channel
+        def filterAndProject = { r ->
+            if (!fields.any { f -> r[f] != null }) return null
+            def projected = new LinkedHashMap()
+            projected['_meta'] = r['meta']
+            for (f in fields) {
+                projected[f] = r[f]
+            }
+            return projected
+        }
+
         if (input instanceof DataflowReadChannel || input instanceof DataflowWriteChannel) {
-            // Apply built-in filter operator to the channel
-            return input.filter { row -> row[1] != null }
+            return input.map(filterAndProject).filter { it != null }
         } else {
-            // Input is a list - process directly
-            return input.findAll { row -> row[1] != null }
+            return input.collect(filterAndProject).findAll { it != null }
         }
     }
 }

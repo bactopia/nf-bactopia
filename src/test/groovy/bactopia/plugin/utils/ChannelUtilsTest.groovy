@@ -408,6 +408,110 @@ class ChannelUtilsTest extends Specification {
         ex.message == 'channels list cannot contain null elements'
     }
 
+    // ---- filterWithData tests ----
+
+    def 'filterWithData should keep records with non-null fields'() {
+        given: 'A list of records'
+        def records = [
+            [meta: [id: 'sample1'], r1: 'read1.fq', r2: 'read2.fq'],
+            [meta: [id: 'sample2'], r1: null, r2: null],
+            [meta: [id: 'sample3'], r1: 'read1.fq', r2: null]
+        ]
+
+        when: 'filterWithData is called'
+        def result = ChannelUtils.filterWithData(records, ['r1', 'r2'])
+
+        then: 'only records with at least one non-null field should remain'
+        result.size() == 2
+        result[0]._meta.id == 'sample1'
+        result[0].r1 == 'read1.fq'
+        result[0].r2 == 'read2.fq'
+        !result[0].containsKey('meta')
+        result[1]._meta.id == 'sample3'
+    }
+
+    def 'filterWithData should filter all-null records'() {
+        given: 'A list of records where all checked fields are null'
+        def records = [
+            [meta: [id: 'sample1'], assembly: null, r1: null],
+            [meta: [id: 'sample2'], assembly: '/path/to/fna', r1: null]
+        ]
+
+        when: 'filterWithData is called'
+        def result = ChannelUtils.filterWithData(records, ['assembly', 'r1'])
+
+        then: 'only the record with a non-null field should remain'
+        result.size() == 1
+        result[0]._meta.id == 'sample2'
+        result[0].assembly == '/path/to/fna'
+    }
+
+    def 'filterWithData should handle single field check'() {
+        given: 'A list of records'
+        def records = [
+            [meta: [id: 'sample1'], species_result: 'found'],
+            [meta: [id: 'sample2'], species_result: null],
+            [meta: [id: 'sample3'], species_result: 'found']
+        ]
+
+        when: 'filterWithData is called with a single field'
+        def result = ChannelUtils.filterWithData(records, ['species_result'])
+
+        then: 'only records with non-null field should remain'
+        result.size() == 2
+        result[0]._meta.id == 'sample1'
+        result[1]._meta.id == 'sample3'
+    }
+
+    def 'filterWithData should return empty for all-null input'() {
+        given: 'A list of records where all fields are null'
+        def records = [
+            [meta: [id: 'sample1'], r1: null],
+            [meta: [id: 'sample2'], r1: null]
+        ]
+
+        when: 'filterWithData is called'
+        def result = ChannelUtils.filterWithData(records, ['r1'])
+
+        then: 'result should be empty'
+        result.isEmpty()
+    }
+
+    def 'filterWithData should handle empty list'() {
+        when: 'filterWithData is called on empty list'
+        def result = ChannelUtils.filterWithData([], ['r1'])
+
+        then: 'result should be empty'
+        result.isEmpty()
+    }
+
+    def 'filterWithData should throw when input is null'() {
+        when: 'filterWithData is called with null input'
+        ChannelUtils.filterWithData(null, ['r1'])
+
+        then:
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'input cannot be null'
+    }
+
+    def 'filterWithData should throw when fields is null'() {
+        when: 'filterWithData is called with null fields'
+        ChannelUtils.filterWithData([], null)
+
+        then:
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'fields cannot be null or empty'
+    }
+
+    def 'filterWithData should throw when fields is empty'() {
+        when: 'filterWithData is called with empty fields'
+        ChannelUtils.filterWithData([], [])
+
+        then:
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'fields cannot be null or empty'
+    }
+
     // DataflowQueue and DataflowVariable support tests
     // Note: Full channel operation tests with DataflowQueue require integration testing
     // These tests verify type recognition and validation still work

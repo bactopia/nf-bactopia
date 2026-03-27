@@ -96,8 +96,9 @@ class BactopiaUtils {
      * @return true if file exists, false otherwise
      */
     public static Boolean fileExists(filename) {
-        if (isLocal(filename)) {
-            return new File(filename).exists()
+        def String path = filename.toString()
+        if (isLocal(path)) {
+            return new File(path).exists()
         }
         // For remote files, we assume they exist
         return true
@@ -110,7 +111,8 @@ class BactopiaUtils {
      * @return false if remote, true if local
      */
     public static Boolean isLocal(filename) {
-        if (filename.startsWith('gs://') || filename.startsWith('s3://') || filename.startsWith('az://') || filename.startsWith('https://')) {
+        def String path = filename.toString()
+        if (path.startsWith('gs://') || path.startsWith('s3://') || path.startsWith('az://') || path.startsWith('https://')) {
             return false
         }
         return true
@@ -146,7 +148,7 @@ class BactopiaUtils {
         } else {
             int magic = 0
             try {
-                RandomAccessFile raf = new RandomAccessFile(new File(filename), "r");
+                RandomAccessFile raf = new RandomAccessFile(new File(filename.toString()), "r");
                 magic = raf.read() & 0xff | ((raf.read() << 8) & 0xff00);
                 raf.close();
             } catch (Throwable e) {
