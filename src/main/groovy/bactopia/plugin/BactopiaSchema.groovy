@@ -306,7 +306,7 @@ class BactopiaSchema {
         } else if (params.workflow.name == "bakta") {
             if (params.bakta_db) {
                 if (!params.download_bakta) {
-                    if (params.bakta_db.endsWith(".tar.gz")) {
+                    if (params.bakta_db.toString().endsWith(".tar.gz")) {
                         error += fileNotFound(params.bakta_db, "bakta_db")
                     } else {
                         error += fileNotFound("${params.bakta_db}/bakta.db", "bakta_db")
@@ -336,7 +336,7 @@ class BactopiaSchema {
         } else if (params.workflow.name == "eggnog") {
             if (params.eggnog_db) {
                 if (!params.download_eggnog) {
-                    if (params.eggnog_db.endsWith(".tar.gz")) {
+                    if (params.eggnog_db.toString().endsWith(".tar.gz")) {
                         error += fileNotFound(params.eggnog_db, "eggnog_db")
                     } else {
                         error += fileNotFound("${params.eggnog_db}/eggnog.db", "eggnog_db")
@@ -363,7 +363,7 @@ class BactopiaSchema {
         } else if (params.workflow.name == "gtdb") {
             if (params.gtdb) {
                 if (!params.download_gtdb) {
-                    if (params.gtdb.endsWith(".tar.gz")) {
+                    if (params.gtdb.toString().endsWith(".tar.gz")) {
                         error += fileNotFound(params.gtdb, "gtdb")
                     } else {
                         error += fileNotFound("${params.gtdb}/metadata/metadata.txt", "gtdb")
@@ -374,7 +374,7 @@ class BactopiaSchema {
             }
         } else if (params.workflow.name == "kraken2") {
             if (params.kraken2_db) {
-                if (params.kraken2_db.endsWith(".tar.gz")) {
+                if (params.kraken2_db.toString().endsWith(".tar.gz")) {
                     error += fileNotFound(params.kraken2_db, "kraken2_db")
                 } else {
                     error += fileNotFound("${params.kraken2_db}/hash.k2d", "kraken2_db")
@@ -390,7 +390,7 @@ class BactopiaSchema {
             }
         } else if (params.workflow.name == "midas") {
             if (params.midas_db) {
-                if (params.midas_db.endsWith(".tar.gz")) {
+                if (params.midas_db.toString().endsWith(".tar.gz")) {
                     error += fileNotFound(params.midas_db, "midas_db")
                 } else {
                     error += fileNotFound("${params.midas_db}/genome_info.txt", "midas_db")
@@ -404,14 +404,14 @@ class BactopiaSchema {
                 missing_required << "--mykrobe_species"
             }
         } else if (params.workflow.name == "pangenome") {
-            if (params.traits) {
-                error += fileNotFound(params.traits, "traits")
+            if (params.scoary_traits) {
+                error += fileNotFound(params.scoary_traits, "scoary_traits")
             }
         } else if (params.workflow.name == "scoary") {
-            if (params.traits) {
-                error += fileNotFound(params.traits, "traits")
+            if (params.scoary_traits) {
+                error += fileNotFound(params.scoary_traits, "scoary_traits")
             } else {
-                missing_required << "--traits"
+                missing_required << "--scoary_traits"
             }
         } else if (params.workflow.name == "snippy") {
             if (params.accession && params.reference) {
@@ -574,7 +574,7 @@ class BactopiaSchema {
             if (params.use_bakta) {
                 if (params.bakta_db) {
                     if (!params.download_bakta) {
-                        if (params.bakta_db.endsWith(".tar.gz")) {
+                        if (params.bakta_db.toString().endsWith(".tar.gz")) {
                             error += fileNotFound(params.bakta_db, "bakta_db")
                         } else {
                             error += fileNotFound("${params.bakta_db}/bakta.db", "bakta_db")
@@ -588,7 +588,7 @@ class BactopiaSchema {
         } else if (params.workflow.name = "teton") {
             if (params.kraken2_db) {
                 if (isLocal(params.kraken2_db)) {
-                    if (params.kraken2_db.endsWith(".tar.gz")) {
+                    if (params.kraken2_db.toString().endsWith(".tar.gz")) {
                         error += fileNotFound(params.kraken2_db, "kraken2_db")
                     } else {
                         error += fileNotFound("${params.kraken2_db}/hash.k2d", "kraken2_db")

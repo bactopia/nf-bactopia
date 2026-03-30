@@ -8,17 +8,16 @@ import spock.lang.Specification
 
 /**
  * Unit tests for ChannelUtils class
- * 
+ *
  * Note: Channel-based tests are integration tests and should be run
  * in a full Nextflow pipeline context. These unit tests focus on
  * list-based operations.
  */
 class ChannelUtilsTest extends Specification {
 
-    // Note: Channel-based gather() tests require a full Nextflow pipeline context
-    // and should be tested as integration tests (e.g., test-gather.nf)
+    // ---- gather() tests ----
 
-    def 'gather should extract named field from records'() {
+    def 'gather should extract named field from records into record-like map'() {
         given: 'A list of record-like maps'
         def records = [
             [tsv: 'output1.tsv', meta: [id: 'sample1']],
@@ -29,13 +28,13 @@ class ChannelUtilsTest extends Specification {
         when: 'gather is called'
         def result = ChannelUtils.gather(records, 'tsv', [name: 'sccmec'])
 
-        then: 'result should contain the extracted field values with meta passed through'
-        result[0] == [name: 'sccmec']
-        result[1] instanceof Set
-        result[1].size() == 3
-        result[1].contains('output1.tsv')
-        result[1].contains('output2.tsv')
-        result[1].contains('output3.tsv')
+        then: 'result should be a record-like map with _meta and collected field'
+        result._meta == [name: 'sccmec']
+        result.tsv instanceof Set
+        result.tsv.size() == 3
+        result.tsv.contains('output1.tsv')
+        result.tsv.contains('output2.tsv')
+        result.tsv.contains('output3.tsv')
     }
 
     def 'gather should include args in meta when provided'() {
@@ -49,11 +48,11 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gather(records, 'report', [name: 'ariba-report', args: '-C "$" --lazy-quotes'])
 
         then: 'result should have correct meta with args and extracted field values'
-        result[0] == [name: 'ariba-report', args: '-C "$" --lazy-quotes']
-        result[1] instanceof Set
-        result[1].size() == 2
-        result[1].contains('report1.txt')
-        result[1].contains('report2.txt')
+        result._meta == [name: 'ariba-report', args: '-C "$" --lazy-quotes']
+        result.report instanceof Set
+        result.report.size() == 2
+        result.report.contains('report1.txt')
+        result.report.contains('report2.txt')
     }
 
     def 'gather should pass through extra meta keys'() {
@@ -67,9 +66,9 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gather(records, 'masked_aln', [name: 'core-genome.masked.distance', process_name: 'snpdists-masked'])
 
         then: 'all meta keys should pass through as-is'
-        result[0] == [name: 'core-genome.masked.distance', process_name: 'snpdists-masked']
-        result[1] instanceof Set
-        result[1].size() == 2
+        result._meta == [name: 'core-genome.masked.distance', process_name: 'snpdists-masked']
+        result.masked_aln instanceof Set
+        result.masked_aln.size() == 2
     }
 
     def 'gather should not add default keys to meta'() {
@@ -82,11 +81,11 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gather(records, 'tsv', [name: 'sccmec'])
 
         then: 'meta should contain only what was provided'
-        result[0] == [name: 'sccmec']
-        result[0].containsKey('name')
-        !result[0].containsKey('args')
-        !result[0].containsKey('process_name')
-        !result[0].containsKey('subdir')
+        result._meta == [name: 'sccmec']
+        result._meta.containsKey('name')
+        !result._meta.containsKey('args')
+        !result._meta.containsKey('process_name')
+        !result._meta.containsKey('subdir')
     }
 
     def 'gather should handle empty list'() {
@@ -112,10 +111,10 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gather(records, 'report', [name: 'mytool'])
 
         then: 'null values should be filtered out'
-        result[0] == [name: 'mytool']
-        result[1].size() == 2
-        result[1].contains('report1.txt')
-        result[1].contains('report3.txt')
+        result._meta == [name: 'mytool']
+        result.report.size() == 2
+        result.report.contains('report1.txt')
+        result.report.contains('report3.txt')
     }
 
     def 'gather should return empty for all-null field values'() {
@@ -144,9 +143,9 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gather(records, 'report', [name: 'mytool'])
 
         then: 'duplicate values should be deduplicated'
-        result[1].size() == 2
-        result[1].contains('same.txt')
-        result[1].contains('other.txt')
+        result.report.size() == 2
+        result.report.contains('same.txt')
+        result.report.contains('other.txt')
     }
 
     def 'gather should return empty for missing field key'() {
@@ -163,144 +162,105 @@ class ChannelUtilsTest extends Specification {
         result == []
     }
 
-    // Note: Channel-based flattenPaths() tests require a full Nextflow pipeline context
-    // and should be tested as integration tests (e.g., test-flatten.nf)
+    // ---- gatherCsvtk() tests ----
 
-    def 'flattenPaths should flatten list of files'() {
-        given: 'A list with file sets'
-        def list = [
-            [
-                [[id: 'sample1'], ['file1.txt', 'file2.txt'] as Set]
-            ]
+    def 'gatherCsvtk should rename field to csv'() {
+        given: 'A list of record-like maps'
+        def records = [
+            [tsv: 'output1.tsv'],
+            [tsv: 'output2.tsv']
         ]
 
-        when: 'flattenPaths is called'
-        def result = ChannelUtils.flattenPaths(list)
+        when: 'gatherCsvtk is called'
+        def result = ChannelUtils.gatherCsvtk(records, 'tsv', [name: 'abricate'])
 
-        then: 'each file should be in a separate tuple'
-        result.size() == 2
-        result[0] == [[id: 'sample1'], 'file1.txt']
-        result[1] == [[id: 'sample1'], 'file2.txt']
+        then: 'result should have csv field, not tsv'
+        result._meta == [name: 'abricate']
+        result.csv instanceof Set
+        result.csv.size() == 2
+        result.csv.contains('output1.tsv')
+        result.csv.contains('output2.tsv')
+        !result.containsKey('tsv')
     }
 
-    def 'flattenPaths should handle multiple lists'() {
-        given: 'Multiple lists with file sets'
-        def list1 = [
-            [[id: 'sample1'], ['file1.txt'] as Set]
-        ]
-        def list2 = [
-            [[id: 'sample2'], ['file2.txt', 'file3.txt'] as Set]
+    def 'gatherCsvtk should handle report field renamed to csv'() {
+        given: 'A list of records with report field'
+        def records = [
+            [report: 'report1.txt'],
+            [report: 'report2.txt']
         ]
 
-        when: 'flattenPaths is called with multiple lists'
-        def result = ChannelUtils.flattenPaths([list1, list2])
+        when: 'gatherCsvtk is called'
+        def result = ChannelUtils.gatherCsvtk(records, 'report', [name: 'ariba-report', args: '-C "$" --lazy-quotes'])
 
-        then: 'all files should be flattened'
+        then: 'result should have csv field with report values'
+        result._meta == [name: 'ariba-report', args: '-C "$" --lazy-quotes']
+        result.csv.size() == 2
+        result.csv.contains('report1.txt')
+    }
+
+    // ---- gatherFields() tests ----
+
+    def 'gatherFields should handle multiple field mappings'() {
+        given: 'A list of records with multiple fields'
+        def records = [
+            [report: 'r1.txt', summary: 's1.txt'],
+            [report: 'r2.txt', summary: 's2.txt']
+        ]
+
+        when: 'gatherFields is called with rename mapping'
+        def result = ChannelUtils.gatherFields(records, [report: 'csv', summary: 'tsv'], [name: 'tool'])
+
+        then: 'result should have both renamed fields'
+        result._meta == [name: 'tool']
+        result.csv instanceof Set
+        result.csv.size() == 2
+        result.tsv instanceof Set
+        result.tsv.size() == 2
+    }
+
+    // ---- collectNextflowLogs() tests ----
+
+    def 'collectNextflowLogs should flatten nf_logs into tuples'() {
+        given: 'A list of records with nf_logs'
+        def records = [
+            [meta: [id: 'sample1'], nf_logs: ['cmd.sh', 'cmd.log']],
+            [meta: [id: 'sample2'], nf_logs: ['cmd.sh']]
+        ]
+
+        when: 'collectNextflowLogs is called'
+        def result = ChannelUtils.collectNextflowLogs(records)
+
+        then: 'each log file should be a separate tuple'
         result.size() == 3
-        result.find { it[0].id == 'sample1' && it[1] == 'file1.txt' }
-        result.find { it[0].id == 'sample2' && it[1] == 'file2.txt' }
-        result.find { it[0].id == 'sample2' && it[1] == 'file3.txt' }
+        result[0] == [[id: 'sample1'], 'cmd.sh']
+        result[1] == [[id: 'sample1'], 'cmd.log']
+        result[2] == [[id: 'sample2'], 'cmd.sh']
     }
 
-    def 'flattenPaths should handle empty input'() {
-        given: 'An empty list'
-        def emptyList = []
+    def 'collectNextflowLogs should handle empty nf_logs'() {
+        given: 'A list of records with empty nf_logs'
+        def records = [
+            [meta: [id: 'sample1'], nf_logs: []]
+        ]
 
-        when: 'flattenPaths is called'
-        def result = ChannelUtils.flattenPaths(emptyList)
+        when: 'collectNextflowLogs is called'
+        def result = ChannelUtils.collectNextflowLogs(records)
 
         then: 'result should be empty'
         result.isEmpty()
     }
 
-    def 'flattenPaths should preserve meta information'() {
-        given: 'A list with complex meta'
-        def list = [
-            [
-                [[id: 'sample1', single_end: true, extra: 'data'], ['file1.txt', 'file2.txt'] as Set]
-            ]
-        ]
+    def 'collectNextflowLogs should throw when input is null'() {
+        when: 'collectNextflowLogs is called with null'
+        ChannelUtils.collectNextflowLogs(null)
 
-        when: 'flattenPaths is called'
-        def result = ChannelUtils.flattenPaths(list)
-
-        then: 'meta should be preserved in each flattened tuple'
-        result.size() == 2
-        result[0][0] == [id: 'sample1', single_end: true, extra: 'data']
-        result[1][0] == [id: 'sample1', single_end: true, extra: 'data']
+        then:
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'chResults cannot be null'
     }
 
-    def 'flattenPaths should handle Set input for files'() {
-        given: 'A list with Set of files'
-        def fileSet = ['file1.txt', 'file2.txt', 'file3.txt'] as Set
-        def list = [
-            [
-                [[id: 'sample1'], fileSet]
-            ]
-        ]
-
-        when: 'flattenPaths is called'
-        def result = ChannelUtils.flattenPaths(list)
-
-        then: 'all files should be flattened'
-        result.size() == 3
-        result.every { it[0].id == 'sample1' }
-    }
-
-    def 'flattenPaths should handle List input for files'() {
-        given: 'A list with List of files'
-        def fileList = ['file1.txt', 'file2.txt']
-        def list = [
-            [
-                [[id: 'sample1'], fileList]
-            ]
-        ]
-
-        when: 'flattenPaths is called'
-        def result = ChannelUtils.flattenPaths(list)
-
-        then: 'all files should be flattened'
-        result.size() == 2
-        result[0] == [[id: 'sample1'], 'file1.txt']
-        result[1] == [[id: 'sample1'], 'file2.txt']
-    }
-
-    def 'flattenPaths should handle single file path string'() {
-        given: 'A list with single file path string'
-        def list = [
-            [
-                [[id: 'sample1'], '/path/to/file.txt']
-            ]
-        ]
-
-        when: 'flattenPaths is called'
-        def result = ChannelUtils.flattenPaths(list)
-
-        then: 'file should be treated as single item, not split by characters'
-        result.size() == 1
-        result[0] == [[id: 'sample1'], '/path/to/file.txt']
-    }
-
-    def 'flattenPaths should handle mixed single files and collections'() {
-        given: 'A list with mixed single files and collections'
-        def list1 = [
-            [[id: 'sample1'], '/path/to/single.txt']
-        ]
-        def list2 = [
-            [[id: 'sample2'], ['file1.txt', 'file2.txt'] as Set]
-        ]
-
-        when: 'flattenPaths is called with mixed inputs'
-        def result = ChannelUtils.flattenPaths([list1, list2])
-
-        then: 'all files should be handled correctly'
-        result.size() == 3
-        result.find { it[0].id == 'sample1' && it[1] == '/path/to/single.txt' }
-        result.find { it[0].id == 'sample2' && it[1] == 'file1.txt' }
-        result.find { it[0].id == 'sample2' && it[1] == 'file2.txt' }
-    }
-
-    // Error handling tests
+    // ---- Error handling tests ----
 
     def 'gather should throw IllegalArgumentException when chResults is null'() {
         when: 'gather is called with null chResults'
@@ -381,31 +341,6 @@ class ChannelUtilsTest extends Specification {
         then: 'an IllegalArgumentException should be thrown'
         def ex = thrown(IllegalArgumentException)
         ex.message == 'meta.name is required'
-    }
-
-    def 'flattenPaths should throw IllegalArgumentException when channels is null'() {
-        when: 'flattenPaths is called with null'
-        ChannelUtils.flattenPaths(null)
-
-        then: 'an IllegalArgumentException should be thrown'
-        def ex = thrown(IllegalArgumentException)
-        ex.message == 'channels cannot be null'
-    }
-
-    def 'flattenPaths should throw IllegalArgumentException when channels contains null'() {
-        given: 'A list containing a null element'
-        def list = [
-            [[[id: 'sample1'], ['file1.txt'] as Set]],
-            null,
-            [[[id: 'sample2'], ['file2.txt'] as Set]]
-        ]
-
-        when: 'flattenPaths is called'
-        ChannelUtils.flattenPaths(list)
-
-        then: 'an IllegalArgumentException should be thrown'
-        def ex = thrown(IllegalArgumentException)
-        ex.message == 'channels list cannot contain null elements'
     }
 
     // ---- filterWithData tests ----
@@ -512,35 +447,20 @@ class ChannelUtilsTest extends Specification {
         ex.message == 'fields cannot be null or empty'
     }
 
-    // DataflowQueue and DataflowVariable support tests
-    // Note: Full channel operation tests with DataflowQueue require integration testing
-    // These tests verify type recognition and validation still work
+    // DataflowQueue type recognition tests
 
     def 'gather should validate against DataflowQueue type'() {
         given: 'A DataflowQueue instance'
         def queue = new DataflowQueue()
 
         when: 'gather validation runs'
-        def isChannel = queue instanceof DataflowReadChannel || 
-                       queue instanceof DataflowWriteChannel || 
+        def isChannel = queue instanceof DataflowReadChannel ||
+                       queue instanceof DataflowWriteChannel ||
                        queue instanceof DataflowQueue
 
         then: 'DataflowQueue should be recognized as a channel type'
         isChannel == true
         queue instanceof DataflowQueue
-    }
-
-    def 'flattenPaths should validate DataflowQueue in channel list'() {
-        given: 'A DataflowQueue instance'
-        def queue = new DataflowQueue()
-
-        when: 'checking if it would be treated as a channel'
-        def isChannel = queue instanceof DataflowReadChannel || 
-                       queue instanceof DataflowWriteChannel || 
-                       queue instanceof DataflowQueue
-
-        then: 'DataflowQueue should be recognized as a channel type'
-        isChannel == true
     }
 
     def 'DataflowQueue should be instance of expected channel types'() {
@@ -549,7 +469,6 @@ class ChannelUtilsTest extends Specification {
 
         expect: 'DataflowQueue to be recognized in channel detection logic'
         queue instanceof DataflowQueue
-        // DataflowQueue implements DataflowReadChannel and DataflowWriteChannel
         queue instanceof DataflowReadChannel
         queue instanceof DataflowWriteChannel
     }

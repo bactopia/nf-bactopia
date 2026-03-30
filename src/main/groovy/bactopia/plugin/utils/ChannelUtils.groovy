@@ -21,7 +21,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 
 /**
  * Utility class for channel manipulation operations in Bactopia pipelines.
- * Provides functions for gathering, mixing, and transforming channels.
+ * Provides functions for gathering, filtering, and transforming channels.
  *
  * @author Robert Petit <robbie.petit@gmail.com>
  */
@@ -29,24 +29,24 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 class ChannelUtils {
 
     /**
-     * Gather results from a channel of records by extracting a named field,
-     * collecting all values into a set, and wrapping with a meta map.
-     * Follows nf-core pattern: detects if input is a channel or list, applies built-in operators.
+     * Core gather implementation. Extracts fields from a channel of records,
+     * collects all values into sets, and wraps with a meta map into a record-like map.
      *
-     * @param chResults Channel or List of records
-     * @param field     The record field name to extract (e.g., 'tsv', 'report')
-     * @param meta      Output meta map (required). Must contain 'name'. All keys pass through
-     *                  as-is to output. Downstream modules null-guard their own keys.
-     * @return Channel or List containing a single tuple [meta, outputSet], or empty [] if no outputs
-     * @throws IllegalArgumentException if chResults is null, field is null/empty, meta is null, or meta.name is missing
+     * The fieldMapping maps input field names to output field names:
+     *   [inputKey: outputKey] -- extract inputKey from records, emit as outputKey
+     *
+     * @param chResults    Channel or List of records
+     * @param fieldMapping Map of input field name to output field name
+     * @param meta         Output meta map (required). Must contain 'name'.
+     * @return Channel or List containing a single record-like map with _meta + collected fields
+     * @throws IllegalArgumentException if inputs are invalid
      */
-    static Object gather(Object chResults, String field, Map meta) {
-        // Input validation
+    private static Object _gather(Object chResults, Map<String, String> fieldMapping, Map meta) {
         if (chResults == null) {
             throw new IllegalArgumentException("chResults cannot be null")
         }
-        if (field == null || field.trim().isEmpty()) {
-            throw new IllegalArgumentException("field cannot be null or empty")
+        if (fieldMapping == null || fieldMapping.isEmpty()) {
+            throw new IllegalArgumentException("fieldMapping cannot be null or empty")
         }
         if (meta == null) {
             throw new IllegalArgumentException("meta cannot be null")
@@ -55,114 +55,82 @@ class ChannelUtils {
             throw new IllegalArgumentException("meta.name is required")
         }
 
-        // Detect if input is a channel
         if (chResults instanceof DataflowReadChannel || chResults instanceof DataflowWriteChannel) {
+            // Channel-based: collect all records, then build output
             return chResults
-                .collect { r -> r[field] }
-                .map { output -> [meta, output.findAll { it != null }.toSet()] }
-                .filter { _meta, outputs -> !outputs.isEmpty() }
+                .collect { r ->
+                    def Map extracted = [:]
+                    fieldMapping.each { String inputKey, String outputKey ->
+                        extracted[outputKey] = r[inputKey]
+                    }
+                    extracted
+                }
+                .map { List<Map> collected ->
+                    def Map result = [_meta: meta]
+                    fieldMapping.values().each { String outputKey ->
+                        def Set values = collected.collect { it[outputKey] }.findAll { it != null }.toSet()
+                        result[outputKey] = values
+                    }
+                    // Filter: if all output fields are empty sets, return null
+                    def boolean hasData = fieldMapping.values().any { String key -> !result[key].isEmpty() }
+                    hasData ? result : null
+                }
+                .filter { it != null }
         } else {
-            def outputs = chResults.collect { r -> r[field] }.findAll { it != null }.toSet()
-            return outputs.isEmpty() ? [] : [meta, outputs]
+            // List-based
+            def Map result = [_meta: meta]
+            fieldMapping.each { String inputKey, String outputKey ->
+                def Set values = chResults.collect { r -> r[inputKey] }.findAll { it != null }.toSet()
+                result[outputKey] = values
+            }
+            def boolean hasData = fieldMapping.values().any { String key -> !result[key].isEmpty() }
+            return hasData ? result : []
         }
     }
 
     /**
-     * Mix multiple channels and flatten file sets.
-     * Transforms Tuple<Map, Set<Path>> to Tuple<Map, Path>.
-     * Follows nf-core pattern: detects if inputs are channels or lists, applies built-in operators.
+     * Gather a single field from records, keeping the original field name.
+     * Returns a record-like map with _meta and the collected field as a Set.
      *
-     * @param channels List of channels or lists, each containing tuples of [meta, files]
-     * @return Channel or List with flattened tuples [meta, file] for each file
-     * @throws IllegalArgumentException if channels is null or contains null elements
+     * @param chResults Channel or List of records
+     * @param field     The record field name to extract (e.g., 'gff', 'tsv')
+     * @param meta      Output meta map (required). Must contain 'name'.
+     * @return Channel or List containing a single record-like map
      */
-    static Object flattenPaths(List channels) {
-        // Input validation
-        if (channels == null) {
-            throw new IllegalArgumentException("channels cannot be null")
+    static Object gather(Object chResults, String field, Map meta) {
+        if (field == null || field.trim().isEmpty()) {
+            throw new IllegalArgumentException("field cannot be null or empty")
         }
-        if (channels.isEmpty()) {
-            return []
+        return _gather(chResults, [(field): field], meta)
+    }
+
+    /**
+     * Gather a single field from records, renaming it to 'csv' for CSVTK_CONCAT input.
+     * Returns a record-like map with _meta and the collected values under the 'csv' key.
+     *
+     * @param chResults Channel or List of records
+     * @param field     The record field name to extract (e.g., 'tsv', 'report')
+     * @param meta      Output meta map (required). Must contain 'name'.
+     * @return Channel or List containing a single record-like map with csv field
+     */
+    static Object gatherCsvtk(Object chResults, String field, Map meta) {
+        if (field == null || field.trim().isEmpty()) {
+            throw new IllegalArgumentException("field cannot be null or empty")
         }
-        if (channels.any { it == null }) {
-            throw new IllegalArgumentException("channels list cannot contain null elements")
-        }
+        return _gather(chResults, [(field): 'csv'], meta)
+    }
 
-        // Check if we're dealing with channels or lists
-        def firstItem = channels[0]
-        def isChannel = firstItem instanceof DataflowReadChannel || firstItem instanceof DataflowWriteChannel
-
-        if (isChannel) {
-            // Handle single channel case
-            if (channels.size() == 1) {
-                return channels[0].flatMap { row ->
-                    def meta, files
-                    if (row instanceof List && row.size() >= 2) {
-                        meta = row[0]
-                        files = row[1]
-                    } else {
-                        return [row]  // Return as-is if structure is unexpected
-                    }
-
-                    // Check if files is a collection or single path
-                    if (files instanceof Collection) {
-                        // Collection of files (Set, List, etc.)
-                        return files.collect { file -> [meta, file] }
-                    } else {
-                        // Single file path (String, Path, etc.)
-                        return [[meta, files]]
-                    }
-                }
-            }
-
-            // Mix multiple channels and flatten
-            def mixed = channels[0]
-            channels[1..-1].each { ch -> mixed = mixed.mix(ch) }
-            return mixed.flatMap { row ->
-                def meta, files
-                if (row.size() == 1 && row[0] instanceof List && row[0].size() == 2) {
-                    // Handle mixed channels where row is wrapped: [[meta, files]]
-                    meta = row[0][0]
-                    files = row[0][1]
-                } else if (row.size() == 2) {
-                    // Handle normal case: [meta, files]
-                    meta = row[0]
-                    files = row[1]
-                } else {
-                    return [row]  // Return as-is if structure is unexpected
-                }
-
-                // Check if files is a collection or single path
-                if (files instanceof Collection) {
-                    // Collection of files (Set, List, etc.)
-                    return files.collect { file -> [meta, file] }
-                } else {
-                    // Single file path (String, Path, etc.)
-                    return [[meta, files]]
-                }
-            }
-        } else {
-            // Process lists directly
-            def result = []
-            channels.each { list ->
-                list.each { row ->
-                    def meta = row[0]
-                    def files = row[1]
-
-                    // Check if files is a collection or single path
-                    if (files instanceof Collection) {
-                        // Collection of files (Set, List, etc.)
-                        files.each { file ->
-                            result.add([meta, file])
-                        }
-                    } else {
-                        // Single file path (String, Path, etc.)
-                        result.add([meta, files])
-                    }
-                }
-            }
-            return result
-        }
+    /**
+     * Gather multiple fields from records with explicit rename mapping.
+     * Returns a record-like map with _meta and each collected field as a Set.
+     *
+     * @param chResults    Channel or List of records
+     * @param fieldMapping Map of input field names to output field names
+     * @param meta         Output meta map (required). Must contain 'name'.
+     * @return Channel or List containing a single record-like map
+     */
+    static Object gatherFields(Object chResults, Map<String, String> fieldMapping, Map meta) {
+        return _gather(chResults, fieldMapping, meta)
     }
 
     /**
@@ -198,6 +166,34 @@ class ChannelUtils {
             return input.map(filterAndProject).filter { it != null }
         } else {
             return input.collect(filterAndProject).findAll { it != null }
+        }
+    }
+
+    /**
+     * Collect Nextflow log files from a channel of records into [meta, file] tuples.
+     * Expands each record's nf_logs field into individual tuples suitable for publishing.
+     *
+     * @param chResults Channel or List of records containing meta and nf_logs fields
+     * @return Channel or List of [meta, file] tuples
+     * @throws IllegalArgumentException if chResults is null
+     */
+    static Object collectNextflowLogs(Object chResults) {
+        if (chResults == null) {
+            throw new IllegalArgumentException("chResults cannot be null")
+        }
+
+        if (chResults instanceof DataflowReadChannel || chResults instanceof DataflowWriteChannel) {
+            return chResults.flatMap { r ->
+                r.nf_logs.collect { f -> [r.meta, f] }
+            }
+        } else {
+            def result = []
+            chResults.each { r ->
+                r.nf_logs.each { f ->
+                    result << [r.meta, f]
+                }
+            }
+            return result
         }
     }
 }

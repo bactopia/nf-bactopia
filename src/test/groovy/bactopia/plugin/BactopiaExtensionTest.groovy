@@ -270,11 +270,11 @@ class BactopiaExtensionTest extends Specification {
         when: 'gather is called'
         def result = extension.gather(records, 'tsv', [name: 'mytool'])
 
-        then: 'result should be returned from ChannelUtils'
+        then: 'result should be a record-like map with _meta and field'
         result != null
-        result instanceof List
-        result[0] == [name: 'mytool']
-        result[1] instanceof Set
+        result instanceof Map
+        result._meta == [name: 'mytool']
+        result.tsv instanceof Set
     }
 
     def 'gather should pass through meta map'() {
@@ -287,8 +287,8 @@ class BactopiaExtensionTest extends Specification {
         def result = extension.gather(records, 'tsv', [name: 'sccmec', args: '--lazy'])
 
         then: 'meta should contain all provided keys'
-        result[0].name == 'sccmec'
-        result[0].args == '--lazy'
+        result._meta.name == 'sccmec'
+        result._meta.args == '--lazy'
     }
 
     def 'gather should handle empty list'() {
@@ -302,52 +302,39 @@ class BactopiaExtensionTest extends Specification {
         result == []
     }
 
-    // Tests for flattenPaths()
+    // Tests for gatherCsvtk()
 
-    def 'flattenPaths should delegate to ChannelUtils'() {
-        given: 'a list with file sets'
-        def list = [
-            [
-                [[id: 'sample1'], ['file1.txt', 'file2.txt'] as Set]
-            ]
+    def 'gatherCsvtk should rename field to csv'() {
+        given: 'a list of record-like maps'
+        def records = [
+            [tsv: 'output1.txt'],
+            [tsv: 'output2.txt']
         ]
 
-        when: 'flattenPaths is called'
-        def result = extension.flattenPaths(list)
+        when: 'gatherCsvtk is called'
+        def result = extension.gatherCsvtk(records, 'tsv', [name: 'mytool'])
 
-        then: 'result should be flattened'
-        result != null
-        result instanceof List
+        then: 'result should have csv field'
+        result._meta == [name: 'mytool']
+        result.csv instanceof Set
+        result.csv.size() == 2
+    }
+
+    // Tests for collectNextflowLogs()
+
+    def 'collectNextflowLogs should flatten nf_logs'() {
+        given: 'a list of records with nf_logs'
+        def records = [
+            [meta: [id: 'sample1'], nf_logs: ['cmd.sh', 'cmd.log']]
+        ]
+
+        when: 'collectNextflowLogs is called'
+        def result = extension.collectNextflowLogs(records)
+
+        then: 'each log should be a separate tuple'
         result.size() == 2
-    }
-
-    def 'flattenPaths should accept list of lists'() {
-        given: 'multiple lists'
-        def list1 = [
-            [[id: 'sample1'], ['file1.txt'] as Set]
-        ]
-        def list2 = [
-            [[id: 'sample2'], ['file2.txt'] as Set]
-        ]
-
-        when: 'flattenPaths is called with multiple lists'
-        def result = extension.flattenPaths([list1, list2])
-
-        then: 'all files should be flattened'
-        result != null
-        result.size() >= 2
-    }
-
-    def 'flattenPaths should handle empty list'() {
-        given: 'an empty list'
-        def list = []
-
-        when: 'flattenPaths is called'
-        def result = extension.flattenPaths(list)
-
-        then: 'result should be empty'
-        result != null
-        result.isEmpty()
+        result[0] == [[id: 'sample1'], 'cmd.sh']
+        result[1] == [[id: 'sample1'], 'cmd.log']
     }
 
     // Tests for formatSamples()

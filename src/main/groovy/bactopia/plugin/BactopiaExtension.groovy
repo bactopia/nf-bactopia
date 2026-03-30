@@ -153,13 +153,13 @@ class BactopiaExtension extends PluginExtensionPoint {
     }
 
     /**
-     * Gather results from a channel of records by extracting a named field,
-     * collecting all values into a set, and wrapping with a meta map.
+     * Gather a single field from records, keeping the original field name.
+     * Returns a record-like map with _meta and the collected field as a Set.
      *
      * @param chResults Channel or List of records
-     * @param field     The record field name to extract (e.g., 'tsv', 'report')
+     * @param field     The record field name to extract (e.g., 'gff', 'tsv')
      * @param meta      Output meta map (required). Must contain 'name'. All keys pass through as-is.
-     * @return Channel or List containing a single tuple [meta, outputSet]
+     * @return Channel or List containing a single record-like map
      */
     @Function
     Object gather(Object chResults, String field, Map meta) {
@@ -167,15 +167,29 @@ class BactopiaExtension extends PluginExtensionPoint {
     }
 
     /**
-     * Mix multiple channels and flatten file sets.
-     * Transforms Tuple<Map, Set<Path>> to Tuple<Map, Path>.
+     * Gather a single field from records, renaming it to 'csv' for CSVTK_CONCAT input.
      *
-     * @param channels List of channels or lists, each containing tuples of [meta, files]
-     * @return Channel or List with flattened tuples [meta, file] for each file
+     * @param chResults Channel or List of records
+     * @param field     The record field name to extract (e.g., 'tsv', 'report')
+     * @param meta      Output meta map (required). Must contain 'name'. All keys pass through as-is.
+     * @return Channel or List containing a single record-like map with csv field
      */
     @Function
-    Object flattenPaths(List channels) {
-        return ChannelUtils.flattenPaths(channels)
+    Object gatherCsvtk(Object chResults, String field, Map meta) {
+        return ChannelUtils.gatherCsvtk(chResults, field, meta)
+    }
+
+    /**
+     * Gather multiple fields from records with explicit rename mapping.
+     *
+     * @param chResults    Channel or List of records
+     * @param fieldMapping Map of input field names to output field names
+     * @param meta         Output meta map (required). Must contain 'name'. All keys pass through as-is.
+     * @return Channel or List containing a single record-like map
+     */
+    @Function
+    Object gatherFields(Object chResults, Map<String, String> fieldMapping, Map meta) {
+        return ChannelUtils.gatherFields(chResults, fieldMapping, meta)
     }
 
     /**
@@ -201,5 +215,17 @@ class BactopiaExtension extends PluginExtensionPoint {
     @Function
     Object filterWithData(Object input, List<String> fields) {
         return ChannelUtils.filterWithData(input, fields)
+    }
+
+    /**
+     * Collect Nextflow log files from a channel of records into [meta, file] tuples.
+     * Expands each record's nf_logs field into individual tuples suitable for publishing.
+     *
+     * @param chResults Channel or List of records containing meta and nf_logs fields
+     * @return Channel or List of [meta, file] tuples
+     */
+    @Function
+    Object collectNextflowLogs(Object chResults) {
+        return ChannelUtils.collectNextflowLogs(chResults)
     }
 }

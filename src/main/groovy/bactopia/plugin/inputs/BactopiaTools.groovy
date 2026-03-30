@@ -168,136 +168,121 @@ class BactopiaTools {
     /**
      * Navigate the Bactopia output directory and collect the inputs for a given Bactopia Tool.
      *
+     * Keys in the returned map use the standardized ext vocabulary:
+     * fna, fna_anno, faa, gff, gbk, tsv_meta, blastdb, r1, r2, se, lr
+     *
      * @param sample The sample name
      * @param dir The Bactopia directory path
-     * @param extension The tool-specific extension configuration
+     * @param ext List of required input keys from the controlled vocabulary
      * @return Map containing collected inputs or error message
      */
-    private static Map _collectInputs(String sample, String dir, String extension, Map EMPTY_PATHS) {
-        def Map PATHS  = [:]
-        PATHS.blastdb  = "annotator"
-        PATHS.fastq    = "qc"
-        PATHS.fna      = "assembler"
-        PATHS.anno_fna = "annotator"
-        PATHS.faa      = "annotator"
-        PATHS.gbk      = "annotator"
-        PATHS.gff      = "annotator"
-        PATHS.meta     = "gather"
+    private static Map _collectInputs(String sample, String dir, List<String> ext, Map EMPTY_PATHS) {
+        def Map PATHS = [:]
+        PATHS.blastdb   = "annotator"
+        PATHS.fastq     = "qc"
+        PATHS.fna       = "assembler"
+        PATHS.fna_anno  = "annotator"
+        PATHS.faa       = "annotator"
+        PATHS.gbk       = "annotator"
+        PATHS.gff       = "annotator"
+        PATHS.tsv_meta  = "gather"
 
-        // Set up the paths for each extension
+        // Set up file paths
         def String baseDir = "${dir}/${sample}/main/"
-        def String se = "${baseDir}/${PATHS['fastq']}/${sample}.fastq.gz"
-        def String pe1 = "${baseDir}/${PATHS['fastq']}/${sample}_R1.fastq.gz"
-        def String pe2 = "${baseDir}/${PATHS['fastq']}/${sample}_R2.fastq.gz"
-        def String fna = "${baseDir}/${PATHS['fna']}/${sample}.fna"
-        def String meta_file = "${baseDir}/${PATHS['meta']}/${sample}-meta.tsv"
-        
+        def String sePath = "${baseDir}/${PATHS['fastq']}/${sample}.fastq.gz"
+        def String pe1Path = "${baseDir}/${PATHS['fastq']}/${sample}_R1.fastq.gz"
+        def String pe2Path = "${baseDir}/${PATHS['fastq']}/${sample}_R2.fastq.gz"
+        def String fnaPath = "${baseDir}/${PATHS['fna']}/${sample}.fna"
+        def String tsvMetaPath = "${baseDir}/${PATHS['tsv_meta']}/${sample}-meta.tsv"
+
         // Check if the SE reads are ONT or Illumina
-        def Boolean ont = false
+        def Boolean isOnt = false
         if (fileExists("${baseDir}/${PATHS['fastq']}/supplemental/${sample}-final_NanoPlot-report.html")) {
-            // the se read is ONT data
-            ont = true
+            isOnt = true
         }
 
-        // Collect all possible input types
+        // Collect all possible input types using standardized key names
         def Map inputs = [
-            'meta': ['id':sample, 'name':sample],
-            'meta_file': fileExists(meta_file) ? meta_file : EMPTY_PATHS.empty_meta,
-            'r1': fileExists(pe1) ? pe1 : EMPTY_PATHS.empty_r1,
-            'r2': fileExists(pe2) ? pe2 : EMPTY_PATHS.empty_r2,
-            'se': fileExists(se) && !ont ? se : EMPTY_PATHS.empty_se,
-            'ont': fileExists(se) && ont ? se : EMPTY_PATHS.empty_ont,
-            'assembly': fileExists(fna) ? fna : fileExists("${fna}.gz") ? "${fna}.gz" : EMPTY_PATHS.empty_assembly,
-            'proteins': EMPTY_PATHS.empty_proteins,
-            'anno_fna': EMPTY_PATHS.empty_assembly,
+            'meta': ['id': sample, 'name': sample],
+            'tsv_meta': fileExists(tsvMetaPath) ? tsvMetaPath : EMPTY_PATHS.empty_meta,
+            'r1': fileExists(pe1Path) ? pe1Path : EMPTY_PATHS.empty_r1,
+            'r2': fileExists(pe2Path) ? pe2Path : EMPTY_PATHS.empty_r2,
+            'se': fileExists(sePath) && !isOnt ? sePath : EMPTY_PATHS.empty_se,
+            'lr': fileExists(sePath) && isOnt ? sePath : EMPTY_PATHS.empty_ont,
+            'fna': fileExists(fnaPath) ? fnaPath : fileExists("${fnaPath}.gz") ? "${fnaPath}.gz" : EMPTY_PATHS.empty_assembly,
+            'faa': EMPTY_PATHS.empty_proteins,
+            'fna_anno': EMPTY_PATHS.empty_assembly,
             'gbk': EMPTY_PATHS.empty_gbk,
             'gff': EMPTY_PATHS.empty_gff,
             'blastdb': EMPTY_PATHS.empty_blastdb,
             'missing_required': false
         ]
 
-        // Handle annotations
-        inputs['proteins'] = _findAnnotationFile(baseDir, PATHS['faa'], sample, 'faa', 'faa') ?: inputs['proteins']
-        inputs['anno_fna'] = _findAnnotationFile(baseDir, PATHS['anno_fna'], sample, 'fna', 'fna') ?: inputs['anno_fna']
+        // Handle annotations (prefer Bakta over Prokka)
+        inputs['faa'] = _findAnnotationFile(baseDir, PATHS['faa'], sample, 'faa', 'faa') ?: inputs['faa']
+        inputs['fna_anno'] = _findAnnotationFile(baseDir, PATHS['fna_anno'], sample, 'fna', 'fna') ?: inputs['fna_anno']
         inputs['gff'] = _findAnnotationFile(baseDir, PATHS['gff'], sample, 'gff3', 'gff') ?: inputs['gff']
         inputs['gbk'] = _findAnnotationFile(baseDir, PATHS['gbk'], sample, 'gbff', 'gbk') ?: inputs['gbk']
 
         def String blastdb = "${baseDir}/${PATHS['blastdb']}/bakta/${sample}-blastdb.tar.gz"
         blastdb = fileExists(blastdb) ? blastdb : "${baseDir}/${PATHS['blastdb']}/prokka/${sample}-blastdb.tar.gz"
-        if (fileExists(blastdb)) { 
+        if (fileExists(blastdb)) {
             inputs['blastdb'] = blastdb
         }
 
-        // Edit meta map based on extension
-        // Extensions with no additions: fna_faa_gff, fna_faa, fna_meta, blastdb, gbk, gff, proteins
+        // Determine required files from ext list
+        def Set<String> READ_KEYS = ['r1', 'r2', 'se', 'lr'] as Set
+        def List<String> resolved = ext.contains('fastq')
+            ? (ext.findAll { it != 'fastq' } + ['r1', 'r2', 'se', 'lr']).unique()
+            : new ArrayList<>(ext)
+        def List<String> nonReadKeys = resolved.findAll { !(it in READ_KEYS) }
+        def List<String> requestedReadKeys = resolved.findAll { it in READ_KEYS }
+
+        // Non-read keys: all required (AND logic)
         def List required_files = []
-        if (extension == "illumina_fastq") {
-            inputs['meta'].runtype = 'illumina'
-            inputs['meta'].single_end = (fileExists(pe1) && fileExists(pe2)) ? false : true
+        nonReadKeys.each { String key -> required_files << inputs[key] }
 
-            if (inputs['meta'].single_end) {
+        // Read keys: detect available reads, set metadata, require at least one valid set
+        if (requestedReadKeys) {
+            def boolean readFound = false
+
+            // Check for long reads (lr)
+            if ('lr' in requestedReadKeys && fileExists(sePath) && isOnt) {
+                inputs['meta'].single_end = true
+                inputs['meta'].runtype = 'ont'
+                required_files << inputs['lr']
+                readFound = true
+            }
+
+            // Check for SE illumina reads
+            if (!readFound && 'se' in requestedReadKeys && fileExists(sePath) && !isOnt) {
+                inputs['meta'].single_end = true
+                inputs['meta'].runtype = 'illumina'
                 required_files << inputs['se']
-            } else {
-                required_files << inputs['r1']
-                required_files << inputs['r2']
+                readFound = true
             }
-        } else if (extension == 'fastq') {
-            if (fileExists(se)) {
-                inputs['meta'].single_end = true
-                inputs['meta'].runtype = (ont) ? 'ont' : 'illumina'
 
-                if (ont) {
-                    required_files << inputs['ont']
-                } else {
-                    required_files << inputs['se']
-                }
-            } else if (fileExists(pe1) && fileExists(pe2)) {
+            // Check for PE illumina reads
+            if (!readFound && 'r1' in requestedReadKeys && 'r2' in requestedReadKeys
+                    && fileExists(pe1Path) && fileExists(pe2Path)) {
                 inputs['meta'].single_end = false
                 inputs['meta'].runtype = 'illumina'
                 required_files << inputs['r1']
                 required_files << inputs['r2']
+                readFound = true
             }
-        } else if (extension == 'fna_fastq') {
-            required_files << inputs['assembly']
-            if (fileExists(se)) {
-                inputs['meta'].single_end = true
-                inputs['meta'].runtype = (ont) ? 'ont' : 'illumina'
-                if (ont) {
-                    required_files << inputs['ont']
-                } else {
-                    required_files << inputs['se']
-                }
-            } else if (fileExists(pe1) && fileExists(pe2)) {
-                inputs['meta'].single_end = false
-                inputs['meta'].runtype = 'illumina'
-                required_files << inputs['r1']
-                required_files << inputs['r2']
+
+            // No acceptable reads found -- force missing_required
+            if (!readFound) {
+                required_files << EMPTY_PATHS.empty_r1
             }
-        } else if (extension == 'fna_faa_gff') {
-            required_files << inputs['assembly']
-            required_files << inputs['proteins']
-            required_files << inputs['gff']
-        } else if (extension == 'fna_faa') {
-            required_files << inputs['assembly']
-            required_files << inputs['proteins']
-        } else if (extension == 'fna_meta') {
-            required_files << inputs['assembly']
-            required_files << inputs['meta_file']
-        } else if (extension == 'blastdb') {
-            required_files << inputs['blastdb']
-        } else if (extension == 'gbk') {
-            required_files << inputs['gbk']
-        } else if (extension == 'gff') {
-            required_files << inputs['gff']
-        } else if (extension == 'proteins') {
-            required_files << inputs['proteins']
         }
 
         // Check for missing required files
         inputs['missing_required'] = _missingRequiredFiles(required_files)
 
         // Convert all non-meta, non-boolean fields to Path for record type compatibility
-        inputs.each { key, value ->
+        inputs.each { String key, value ->
             if (value != null && !(value instanceof Path) && !(value instanceof Map) && !(value instanceof Boolean)) {
                 inputs[key] = Path.of(value.toString())
             }
