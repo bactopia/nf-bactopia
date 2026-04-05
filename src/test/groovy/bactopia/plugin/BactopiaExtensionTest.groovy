@@ -270,10 +270,10 @@ class BactopiaExtensionTest extends Specification {
         when: 'gather is called'
         def result = extension.gather(records, 'tsv', [name: 'mytool'])
 
-        then: 'result should be a record-like map with _meta and field'
+        then: 'result should be a record-like map with meta and field'
         result != null
         result instanceof Map
-        result._meta == [name: 'mytool']
+        result.meta == [name: 'mytool']
         result.tsv instanceof Set
     }
 
@@ -287,8 +287,8 @@ class BactopiaExtensionTest extends Specification {
         def result = extension.gather(records, 'tsv', [name: 'sccmec', args: '--lazy'])
 
         then: 'meta should contain all provided keys'
-        result._meta.name == 'sccmec'
-        result._meta.args == '--lazy'
+        result.meta.name == 'sccmec'
+        result.meta.args == '--lazy'
     }
 
     def 'gather should handle empty list'() {
@@ -315,7 +315,7 @@ class BactopiaExtensionTest extends Specification {
         def result = extension.gatherCsvtk(records, 'tsv', [name: 'mytool'])
 
         then: 'result should have csv field'
-        result._meta == [name: 'mytool']
+        result.meta == [name: 'mytool']
         result.csv instanceof Set
         result.csv.size() == 2
     }

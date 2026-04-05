@@ -154,7 +154,7 @@ class BactopiaExtension extends PluginExtensionPoint {
 
     /**
      * Gather a single field from records, keeping the original field name.
-     * Returns a record-like map with _meta and the collected field as a Set.
+     * Returns a record-like map with meta and the collected field as a Set.
      *
      * @param chResults Channel or List of records
      * @param field     The record field name to extract (e.g., 'gff', 'tsv')
@@ -227,5 +227,20 @@ class BactopiaExtension extends PluginExtensionPoint {
     @Function
     Object collectNextflowLogs(Object chResults) {
         return ChannelUtils.collectNextflowLogs(chResults)
+    }
+
+    /**
+     * Create a cartesian product by combining a gathered channel with a multi-item
+     * channel, merging each item into the gathered map under the specified field name.
+     * Replaces the deprecated Nextflow {@code each} input qualifier.
+     *
+     * @param gathered Channel or List (single-item, e.g. from gatherFields)
+     * @param items    Channel or List (multi-item, e.g. individual references)
+     * @param field    Field name to assign each item in the output map
+     * @return Channel or List of maps with the item merged in under field name
+     */
+    @Function
+    Object combineWith(Object gathered, Object items, String field) {
+        return ChannelUtils.combineWith(gathered, items, field)
     }
 }

@@ -38,7 +38,7 @@ class ChannelUtils {
      * @param chResults    Channel or List of records
      * @param fieldMapping Map of input field name to output field name
      * @param meta         Output meta map (required). Must contain 'name'.
-     * @return Channel or List containing a single record-like map with _meta + collected fields
+     * @return Channel or List containing a single record-like map with meta + collected fields
      * @throws IllegalArgumentException if inputs are invalid
      */
     private static Object _gather(Object chResults, Map<String, String> fieldMapping, Map meta) {
@@ -65,22 +65,20 @@ class ChannelUtils {
                     }
                     extracted
                 }
-                .map { List<Map> collected ->
-                    def Map result = [_meta: meta]
+                .flatMap { List<Map> collected ->
+                    def Map result = [meta: meta]
                     fieldMapping.values().each { String outputKey ->
-                        def Set values = collected.collect { it[outputKey] }.findAll { it != null }.toSet()
+                        def Set values = collected.collect { v -> v[outputKey] }.findAll { v -> v != null }.toSet()
                         result[outputKey] = values
                     }
-                    // Filter: if all output fields are empty sets, return null
                     def boolean hasData = fieldMapping.values().any { String key -> !result[key].isEmpty() }
-                    hasData ? result : null
+                    hasData ? [result] : []
                 }
-                .filter { it != null }
         } else {
             // List-based
-            def Map result = [_meta: meta]
+            def Map result = [meta: meta]
             fieldMapping.each { String inputKey, String outputKey ->
-                def Set values = chResults.collect { r -> r[inputKey] }.findAll { it != null }.toSet()
+                def Set values = chResults.collect { r -> r[inputKey] }.findAll { v -> v != null }.toSet()
                 result[outputKey] = values
             }
             def boolean hasData = fieldMapping.values().any { String key -> !result[key].isEmpty() }
@@ -90,7 +88,7 @@ class ChannelUtils {
 
     /**
      * Gather a single field from records, keeping the original field name.
-     * Returns a record-like map with _meta and the collected field as a Set.
+     * Returns a record-like map with meta and the collected field as a Set.
      *
      * @param chResults Channel or List of records
      * @param field     The record field name to extract (e.g., 'gff', 'tsv')
@@ -106,7 +104,7 @@ class ChannelUtils {
 
     /**
      * Gather a single field from records, renaming it to 'csv' for CSVTK_CONCAT input.
-     * Returns a record-like map with _meta and the collected values under the 'csv' key.
+     * Returns a record-like map with meta and the collected values under the 'csv' key.
      *
      * @param chResults Channel or List of records
      * @param field     The record field name to extract (e.g., 'tsv', 'report')
@@ -122,7 +120,7 @@ class ChannelUtils {
 
     /**
      * Gather multiple fields from records with explicit rename mapping.
-     * Returns a record-like map with _meta and each collected field as a Set.
+     * Returns a record-like map with meta and each collected field as a Set.
      *
      * @param chResults    Channel or List of records
      * @param fieldMapping Map of input field names to output field names
@@ -136,12 +134,12 @@ class ChannelUtils {
     /**
      * Filter records where at least one of the specified fields is non-null.
      * Filters records where at least one of the specified fields is non-null, then projects
-     * the record down to only {@code _meta} (mapped from {@code meta}) plus the requested fields.
+     * the record down to only {@code meta} plus the requested fields.
      * This prevents downstream processes from receiving extra record fields that cause type errors.
      *
      * @param input  Channel or List of records
      * @param fields List of field names to check for non-null values and include in output
-     * @return Channel or List of projected records containing only _meta + requested fields
+     * @return Channel or List of projected records containing only meta + requested fields
      * @throws IllegalArgumentException if input is null or fields is null/empty
      */
     static Object filterWithData(Object input, List<String> fields) {
@@ -153,9 +151,14 @@ class ChannelUtils {
         }
 
         def filterAndProject = { r ->
-            if (!fields.any { f -> r[f] != null }) return null
+            if (!fields.any { f ->
+                def val = r[f]
+                if (val == null) return false
+                if (val instanceof Collection && val.isEmpty()) return false
+                return true
+            }) return null
             def projected = new LinkedHashMap()
-            projected['_meta'] = r['meta']
+            projected['meta'] = r['meta']
             for (f in fields) {
                 projected[f] = r[f]
             }
@@ -163,9 +166,9 @@ class ChannelUtils {
         }
 
         if (input instanceof DataflowReadChannel || input instanceof DataflowWriteChannel) {
-            return input.map(filterAndProject).filter { it != null }
+            return input.map(filterAndProject).filter { v -> v != null }
         } else {
-            return input.collect(filterAndProject).findAll { it != null }
+            return input.collect(filterAndProject).findAll { v -> v != null }
         }
     }
 
@@ -194,6 +197,57 @@ class ChannelUtils {
                 }
             }
             return result
+        }
+    }
+
+    /**
+     * Create a cartesian product by combining a gathered channel with a multi-item
+     * channel, merging each item into the gathered map under the specified field name.
+     * Replaces the deprecated Nextflow {@code each} input qualifier.
+     *
+     * <p>Example: if gathered emits {@code [meta:[name:fastani], query:[a.fna, b.fna]]}
+     * and items emits {@code ref1.fna}, {@code ref2.fna}, the result emits:
+     * <ul>
+     *   <li>{@code [meta:[name:fastani], query:[a.fna, b.fna], reference:ref1.fna]}</li>
+     *   <li>{@code [meta:[name:fastani], query:[a.fna, b.fna], reference:ref2.fna]}</li>
+     * </ul>
+     *
+     * @param gathered Channel or List (single-item, e.g. from gatherFields)
+     * @param items    Channel or List (multi-item, e.g. individual references)
+     * @param field    Field name to assign each item in the output map
+     * @return Channel or List of maps with the item merged in under field name
+     * @throws IllegalArgumentException if any argument is null or field is empty
+     */
+    static Object combineWith(Object gathered, Object items, String field) {
+        if (gathered == null) {
+            throw new IllegalArgumentException("gathered cannot be null")
+        }
+        if (items == null) {
+            throw new IllegalArgumentException("items cannot be null")
+        }
+        if (field == null || field.trim().isEmpty()) {
+            throw new IllegalArgumentException("field cannot be null or empty")
+        }
+
+        if (gathered instanceof DataflowReadChannel || gathered instanceof DataflowWriteChannel) {
+            return gathered.combine(items).map { List tuple ->
+                def Map result = new LinkedHashMap(tuple[0] as Map)
+                result[field] = tuple[1]
+                return result
+            }
+        } else {
+            // List-based: standard cartesian product with merge
+            def List gatheredList = gathered instanceof List ? gathered : [gathered]
+            def List itemsList = items instanceof List ? items : [items]
+            def List results = []
+            gatheredList.each { Map g ->
+                itemsList.each { item ->
+                    def Map merged = new LinkedHashMap(g)
+                    merged[field] = item
+                    results << merged
+                }
+            }
+            return results
         }
     }
 }

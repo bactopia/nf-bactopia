@@ -28,8 +28,8 @@ class ChannelUtilsTest extends Specification {
         when: 'gather is called'
         def result = ChannelUtils.gather(records, 'tsv', [name: 'sccmec'])
 
-        then: 'result should be a record-like map with _meta and collected field'
-        result._meta == [name: 'sccmec']
+        then: 'result should be a record-like map with meta and collected field'
+        result.meta == [name: 'sccmec']
         result.tsv instanceof Set
         result.tsv.size() == 3
         result.tsv.contains('output1.tsv')
@@ -48,7 +48,7 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gather(records, 'report', [name: 'ariba-report', args: '-C "$" --lazy-quotes'])
 
         then: 'result should have correct meta with args and extracted field values'
-        result._meta == [name: 'ariba-report', args: '-C "$" --lazy-quotes']
+        result.meta == [name: 'ariba-report', args: '-C "$" --lazy-quotes']
         result.report instanceof Set
         result.report.size() == 2
         result.report.contains('report1.txt')
@@ -66,7 +66,7 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gather(records, 'masked_aln', [name: 'core-genome.masked.distance', process_name: 'snpdists-masked'])
 
         then: 'all meta keys should pass through as-is'
-        result._meta == [name: 'core-genome.masked.distance', process_name: 'snpdists-masked']
+        result.meta == [name: 'core-genome.masked.distance', process_name: 'snpdists-masked']
         result.masked_aln instanceof Set
         result.masked_aln.size() == 2
     }
@@ -81,11 +81,11 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gather(records, 'tsv', [name: 'sccmec'])
 
         then: 'meta should contain only what was provided'
-        result._meta == [name: 'sccmec']
-        result._meta.containsKey('name')
-        !result._meta.containsKey('args')
-        !result._meta.containsKey('process_name')
-        !result._meta.containsKey('subdir')
+        result.meta == [name: 'sccmec']
+        result.meta.containsKey('name')
+        !result.meta.containsKey('args')
+        !result.meta.containsKey('process_name')
+        !result.meta.containsKey('subdir')
     }
 
     def 'gather should handle empty list'() {
@@ -111,7 +111,7 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gather(records, 'report', [name: 'mytool'])
 
         then: 'null values should be filtered out'
-        result._meta == [name: 'mytool']
+        result.meta == [name: 'mytool']
         result.report.size() == 2
         result.report.contains('report1.txt')
         result.report.contains('report3.txt')
@@ -175,7 +175,7 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gatherCsvtk(records, 'tsv', [name: 'abricate'])
 
         then: 'result should have csv field, not tsv'
-        result._meta == [name: 'abricate']
+        result.meta == [name: 'abricate']
         result.csv instanceof Set
         result.csv.size() == 2
         result.csv.contains('output1.tsv')
@@ -194,7 +194,7 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gatherCsvtk(records, 'report', [name: 'ariba-report', args: '-C "$" --lazy-quotes'])
 
         then: 'result should have csv field with report values'
-        result._meta == [name: 'ariba-report', args: '-C "$" --lazy-quotes']
+        result.meta == [name: 'ariba-report', args: '-C "$" --lazy-quotes']
         result.csv.size() == 2
         result.csv.contains('report1.txt')
     }
@@ -212,7 +212,7 @@ class ChannelUtilsTest extends Specification {
         def result = ChannelUtils.gatherFields(records, [report: 'csv', summary: 'tsv'], [name: 'tool'])
 
         then: 'result should have both renamed fields'
-        result._meta == [name: 'tool']
+        result.meta == [name: 'tool']
         result.csv instanceof Set
         result.csv.size() == 2
         result.tsv instanceof Set
@@ -358,11 +358,10 @@ class ChannelUtilsTest extends Specification {
 
         then: 'only records with at least one non-null field should remain'
         result.size() == 2
-        result[0]._meta.id == 'sample1'
+        result[0].meta.id == 'sample1'
         result[0].r1 == 'read1.fq'
         result[0].r2 == 'read2.fq'
-        !result[0].containsKey('meta')
-        result[1]._meta.id == 'sample3'
+        result[1].meta.id == 'sample3'
     }
 
     def 'filterWithData should filter all-null records'() {
@@ -377,7 +376,7 @@ class ChannelUtilsTest extends Specification {
 
         then: 'only the record with a non-null field should remain'
         result.size() == 1
-        result[0]._meta.id == 'sample2'
+        result[0].meta.id == 'sample2'
         result[0].assembly == '/path/to/fna'
     }
 
@@ -394,8 +393,8 @@ class ChannelUtilsTest extends Specification {
 
         then: 'only records with non-null field should remain'
         result.size() == 2
-        result[0]._meta.id == 'sample1'
-        result[1]._meta.id == 'sample3'
+        result[0].meta.id == 'sample1'
+        result[1].meta.id == 'sample3'
     }
 
     def 'filterWithData should return empty for all-null input'() {
@@ -471,5 +470,126 @@ class ChannelUtilsTest extends Specification {
         queue instanceof DataflowQueue
         queue instanceof DataflowReadChannel
         queue instanceof DataflowWriteChannel
+    }
+
+    // ---- combineWith() tests ----
+
+    def 'combineWith should create cartesian product and merge field'() {
+        given: 'A gathered map and a list of items'
+        def gathered = [[meta: [name: 'fastani'], query: ['a.fna', 'b.fna'].toSet()]]
+        def items = ['ref1.fna', 'ref2.fna']
+
+        when: 'combineWith is called'
+        def result = ChannelUtils.combineWith(gathered, items, 'reference')
+
+        then: 'result should have one entry per item with the field merged in'
+        result.size() == 2
+        result[0].meta == [name: 'fastani']
+        result[0].query == ['a.fna', 'b.fna'].toSet()
+        result[0].reference == 'ref1.fna'
+        result[1].reference == 'ref2.fna'
+    }
+
+    def 'combineWith should handle single gathered with single item'() {
+        given: 'A single gathered map and a single item'
+        def gathered = [[meta: [name: 'tool'], query: ['q1.fna'].toSet()]]
+        def items = ['ref.fna']
+
+        when: 'combineWith is called'
+        def result = ChannelUtils.combineWith(gathered, items, 'reference')
+
+        then: 'result should have one entry'
+        result.size() == 1
+        result[0].reference == 'ref.fna'
+        result[0].query == ['q1.fna'].toSet()
+    }
+
+    def 'combineWith should handle multiple gathered with multiple items'() {
+        given: 'Two gathered maps and three items'
+        def gathered = [
+            [meta: [name: 'a'], query: ['q1'].toSet()],
+            [meta: [name: 'b'], query: ['q2'].toSet()]
+        ]
+        def items = ['r1', 'r2', 'r3']
+
+        when: 'combineWith is called'
+        def result = ChannelUtils.combineWith(gathered, items, 'ref')
+
+        then: 'result should have 2x3=6 entries'
+        result.size() == 6
+        result[0].meta == [name: 'a']
+        result[0].ref == 'r1'
+        result[3].meta == [name: 'b']
+        result[3].ref == 'r1'
+    }
+
+    def 'combineWith should not modify original gathered map'() {
+        given: 'A gathered map'
+        def original = [meta: [name: 'tool'], query: ['q1'].toSet()]
+        def gathered = [original]
+
+        when: 'combineWith is called'
+        def result = ChannelUtils.combineWith(gathered, ['ref.fna'], 'reference')
+
+        then: 'original map should not have the new field'
+        !original.containsKey('reference')
+        result[0].containsKey('reference')
+    }
+
+    def 'combineWith should return empty for empty items'() {
+        given: 'A gathered map and empty items list'
+        def gathered = [[meta: [name: 'tool'], query: ['q1'].toSet()]]
+
+        when: 'combineWith is called with empty items'
+        def result = ChannelUtils.combineWith(gathered, [], 'reference')
+
+        then: 'result should be empty'
+        result.isEmpty()
+    }
+
+    def 'combineWith should return empty for empty gathered'() {
+        given: 'An empty gathered list and some items'
+
+        when: 'combineWith is called with empty gathered'
+        def result = ChannelUtils.combineWith([], ['ref.fna'], 'reference')
+
+        then: 'result should be empty'
+        result.isEmpty()
+    }
+
+    def 'combineWith should throw when gathered is null'() {
+        when: 'combineWith is called with null gathered'
+        ChannelUtils.combineWith(null, ['ref.fna'], 'reference')
+
+        then:
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'gathered cannot be null'
+    }
+
+    def 'combineWith should throw when items is null'() {
+        when: 'combineWith is called with null items'
+        ChannelUtils.combineWith([], null, 'reference')
+
+        then:
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'items cannot be null'
+    }
+
+    def 'combineWith should throw when field is null'() {
+        when: 'combineWith is called with null field'
+        ChannelUtils.combineWith([], [], null)
+
+        then:
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'field cannot be null or empty'
+    }
+
+    def 'combineWith should throw when field is empty'() {
+        when: 'combineWith is called with empty field'
+        ChannelUtils.combineWith([], [], '   ')
+
+        then:
+        def ex = thrown(IllegalArgumentException)
+        ex.message == 'field cannot be null or empty'
     }
 }
