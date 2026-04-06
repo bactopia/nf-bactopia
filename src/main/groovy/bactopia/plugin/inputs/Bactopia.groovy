@@ -2,8 +2,6 @@ package bactopia.plugin.inputs
 
 import groovy.util.logging.Slf4j
 
-import static bactopia.plugin.utils.EmptyFiles.getEmptyPaths
-
 @Slf4j
 class Bactopia {
     /**
@@ -14,13 +12,12 @@ class Bactopia {
      * @return List of Map of sample data structures
      */
     public static List<Map> collectBactopiaInputs(Map params, String runtype) {
-        def Map EMPTY_PATHS = getEmptyPaths(params.empty_path)
         if (runtype == "is_fofn") {
-            return processFOFN(params, EMPTY_PATHS)
+            return processFOFN(params)
         } else if (runtype == "is_accessions") {
-            return processAccessions(params, EMPTY_PATHS)
+            return processAccessions(params)
         } else if (runtype == "is_accession") {
-            return processAccession(params, EMPTY_PATHS)
+            return processAccession(params)
         } else {
             def Map meta = [:]
             meta.id = params.sample
@@ -35,19 +32,19 @@ class Bactopia {
                     'meta': meta,
                     'r1': [params.r1],
                     'r2': [params.r2],
-                    'se': [EMPTY_PATHS.empty_se],
-                    'lr': [EMPTY_PATHS.empty_ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'se': [],
+                    'lr': [],
+                    'assembly': []
                 ]]
             } else if (runtype == "single-end") {
                 meta.single_end = true
                 return [[
                     'meta': meta,
-                    'r1': [EMPTY_PATHS.empty_r1],
-                    'r2': [EMPTY_PATHS.empty_r2],
+                    'r1': [],
+                    'r2': [],
                     'se': [params.se],
-                    'lr': [EMPTY_PATHS.empty_ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'lr': [],
+                    'assembly': []
                 ]]
             } else if (runtype == "hybrid" || runtype == "short_polish") {
                 meta.single_end = runtype == "short_polish" ? true : false
@@ -55,28 +52,28 @@ class Bactopia {
                     'meta': meta,
                     'r1': [params.r1],
                     'r2': [params.r2],
-                    'se': [EMPTY_PATHS.empty_se],
+                    'se': [],
                     'lr': [params.ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'assembly': []
                 ]]
             } else if (runtype == "assembly") {
                 return [[
                     'meta': meta,
-                    'r1': [EMPTY_PATHS.empty_r1],
-                    'r2': [EMPTY_PATHS.empty_r2],
-                    'se': [EMPTY_PATHS.empty_se],
-                    'lr': [EMPTY_PATHS.empty_ont],
+                    'r1': [],
+                    'r2': [],
+                    'se': [],
+                    'lr': [],
                     'assembly': [params.assembly]
                 ]]
             } else if (runtype == "ont") {
                 meta.single_end = true
                 return [[
                     'meta': meta,
-                    'r1': [EMPTY_PATHS.empty_r1],
-                    'r2': [EMPTY_PATHS.empty_r2],
-                    'se': [EMPTY_PATHS.empty_se],
+                    'r1': [],
+                    'r2': [],
+                    'se': [],
                     'lr': [params.ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'assembly': []
                 ]]
             } else {
                 log.error("Invalid runtype '${runtype}' provided, please correct to continue. Expected: paired-end, single-end, hybrid, short_polish, assembly, or ont")
@@ -103,10 +100,9 @@ class Bactopia {
      * Process FOFN file and determine input type for each row.
      *
      * @param params The workflow parameters
-     * @param EMPTY_PATHS Map of empty file paths
      * @return List of processed sample data structures
      */
-    public static List<Map> processFOFN(Map params, Map EMPTY_PATHS) {
+    public static List<Map> processFOFN(Map params) {
         def results = []
         def headers = null
         def isFirstLine = true
@@ -129,7 +125,7 @@ class Bactopia {
                 }
                 
                 // Process and collect the result
-                results << _processFOFNLine(line, params, EMPTY_PATHS)
+                results << _processFOFNLine(line, params)
             }
         }
         
@@ -141,10 +137,9 @@ class Bactopia {
      *
      * @param line The FOFN line data
      * @param params The workflow parameters
-     * @param EMPTY_PATHS Map of empty file paths
      * @return Map containing the processed sample data
      */
-    private static Map _processFOFNLine(Map line, Map params, Map EMPTY_PATHS) {
+    private static Map _processFOFNLine(Map line, Map params) {
         /* Parse line and determine if single end or paired reads*/
         def Map meta = [:]
         meta.id = line.sample
@@ -173,21 +168,21 @@ class Bactopia {
                 meta.single_end = true
                 return [
                     'meta': meta,
-                    'r1': [EMPTY_PATHS.empty_r1],
-                    'r2': [EMPTY_PATHS.empty_r2],
-                    'se': [EMPTY_PATHS.empty_se],
+                    'r1': [],
+                    'r2': [],
+                    'se': [],
                     'lr': [line.ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'assembly': []
                 ]
             } else if (line.runtype == 'single-end') {
                 meta.single_end = true
                 return [
                     'meta': meta,
-                    'r1': [EMPTY_PATHS.empty_r1],
-                    'r2': [EMPTY_PATHS.empty_r2],
+                    'r1': [],
+                    'r2': [],
                     'se': [line.se],
-                    'lr': [EMPTY_PATHS.empty_ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'lr': [],
+                    'assembly': []
                 ]
             } else if (line.runtype == 'paired-end') {
                 meta.single_end = false
@@ -195,9 +190,9 @@ class Bactopia {
                     'meta': meta,
                     'r1': [line.r1],
                     'r2': [line.r2],
-                    'se': [EMPTY_PATHS.empty_se],
-                    'lr': [EMPTY_PATHS.empty_ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'se': [],
+                    'lr': [],
+                    'assembly': []
                 ]
             } else if (line.runtype == 'hybrid' || line.runtype == 'short_polish') {
                 // short polish = ONT primary reads, so single-end
@@ -207,17 +202,17 @@ class Bactopia {
                     'meta': meta,
                     'r1': [line.r1],
                     'r2': [line.r2],
-                    'se': [EMPTY_PATHS.empty_se],
+                    'se': [],
                     'lr': [line.ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'assembly': []
                 ]
             } else if (line.runtype == 'assembly') {
                 return [
                     'meta': meta,
-                    'r1': [EMPTY_PATHS.empty_r1],
-                    'r2': [EMPTY_PATHS.empty_r2],
-                    'se': [EMPTY_PATHS.empty_se],
-                    'lr': [EMPTY_PATHS.empty_ont],
+                    'r1': [],
+                    'r2': [],
+                    'se': [],
+                    'lr': [],
                     'assembly': [line.assembly]
                 ]
             } else if (line.runtype == 'merge-pe') {
@@ -226,9 +221,9 @@ class Bactopia {
                     'meta': meta,
                     'r1': handleMultipleFqs(line.r1),
                     'r2': handleMultipleFqs(line.r2),
-                    'se': [EMPTY_PATHS.empty_se],
-                    'lr': [EMPTY_PATHS.empty_ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'se': [],
+                    'lr': [],
+                    'assembly': []
                 ]
             } else if (line.runtype == 'hybrid-merge-pe' || line.runtype == 'short_polish-merge-pe') {
                 // short polish = ONT primary reads, so single-end
@@ -238,19 +233,19 @@ class Bactopia {
                     'meta': meta,
                     'r1': handleMultipleFqs(line.r1),
                     'r2': handleMultipleFqs(line.r2),
-                    'se': [EMPTY_PATHS.empty_se],
+                    'se': [],
                     'lr': [line.ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'assembly': []
                 ]
             } else if (line.runtype == 'merge-se') {
                 meta.single_end = true
                 return [
                     'meta': meta,
-                    'r1': [EMPTY_PATHS.empty_r1],
-                    'r2': [EMPTY_PATHS.empty_r2],
+                    'r1': [],
+                    'r2': [],
                     'se': handleMultipleFqs(line.se),
-                    'lr': [EMPTY_PATHS.empty_ont],
-                    'assembly': [EMPTY_PATHS.empty_assembly]
+                    'lr': [],
+                    'assembly': []
                 ]
             } else {
                 log.error(
@@ -267,10 +262,9 @@ class Bactopia {
      * Process accessions from CSV file.
      *
      * @param params The workflow parameters
-     * @param EMPTY_PATHS Map of empty file paths
      * @return List of Maps of processed accession data structures
      */
-    public static List<Map> processAccessions(Map params, Map EMPTY_PATHS) {
+    public static List<Map> processAccessions(Map params) {
         def results = []
         def headers = null
         def isFirstLine = true
@@ -293,7 +287,7 @@ class Bactopia {
                 }
                 
                 // Process and collect the result
-                results << _processAccessionsLine(row, params, EMPTY_PATHS)
+                results << _processAccessionsLine(row, params)
             }
         }
         
@@ -305,10 +299,9 @@ class Bactopia {
      *
      * @param line The accession line data
      * @param params The workflow parameters
-     * @param EMPTY_PATHS Map of empty file paths
      * @return List containing the processed accession data
      */
-    private static Map _processAccessionsLine(Map line, Map params, Map EMPTY_PATHS) {
+    private static Map _processAccessionsLine(Map line, Map params) {
         /* Parse line and determine if single end or paired reads*/
         def Map meta = [:]
 
@@ -320,11 +313,11 @@ class Bactopia {
             meta.species = params.species
             return [
                 'meta': meta,
-                'r1': [EMPTY_PATHS.empty_r1],
-                'r2': [EMPTY_PATHS.empty_r2],
-                'se': [EMPTY_PATHS.empty_se],
-                'lr': [EMPTY_PATHS.empty_ont],
-                'assembly': [EMPTY_PATHS.empty_assembly]
+                'r1': [],
+                'r2': [],
+                'se': [],
+                'lr': [],
+                'assembly': []
             ]
         } else if (line.accession.startsWith('DRX') || line.accession.startsWith('ERX') || line.accession.startsWith('SRX')) {
             meta.id = line.accession
@@ -338,11 +331,11 @@ class Bactopia {
             meta.species = params.species ? params.species : line.species
             return [
                 'meta': meta,
-                'r1': [EMPTY_PATHS.empty_r1],
-                'r2': [EMPTY_PATHS.empty_r2],
-                'se': [EMPTY_PATHS.empty_se],
-                'lr': [EMPTY_PATHS.empty_ont],
-                'assembly': [EMPTY_PATHS.empty_assembly]
+                'r1': [],
+                'r2': [],
+                'se': [],
+                'lr': [],
+                'assembly': []
             ]
         } else {
             log.error(
@@ -358,10 +351,9 @@ class Bactopia {
      * Process single accession.
      *
      * @param params The workflow parameters
-     * @param EMPTY_PATHS Map of empty file paths
      * @return List containing the processed accession data
      */
-    public static List<Map> processAccession(Map params, Map EMPTY_PATHS) {
+    public static List<Map> processAccession(Map params) {
         String accession = params.accession
         def Map meta = [:]
         meta.genome_size = params.genome_size
@@ -386,11 +378,11 @@ class Bactopia {
             }
             return [[
                 'meta': meta,
-                'r1': [EMPTY_PATHS.empty_r1],
-                'r2': [EMPTY_PATHS.empty_r2],
-                'se': [EMPTY_PATHS.empty_se],
-                'lr': [EMPTY_PATHS.empty_ont],
-                'assembly': [EMPTY_PATHS.empty_assembly]
+                'r1': [],
+                'r2': [],
+                'se': [],
+                'lr': [],
+                'assembly': []
             ]]
         }
         log.error("Accession cannot be empty, please provide a valid accession to continue.")

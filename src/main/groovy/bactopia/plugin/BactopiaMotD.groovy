@@ -104,6 +104,12 @@ class BactopiaMotD {
             "No matter how popular antibiotics get, ${colors.cyan}${colors.italic}they will never go viral!${colors.reset}",
             "What do call a bacterium that can swim fast? ${colors.cyan}${colors.italic}micro-Phelps!${colors.reset}",
             "How do you turn soup into gold? ${colors.cyan}${colors.italic}Add 24 carrots!${colors.reset}",
+            "What kind of haircut does a bee get? ${colors.cyan}${colors.italic}A buzzcut!${colors.reset}",
+            "Which bird is in need of a wig? ${colors.cyan}${colors.italic}A bald eagle!${colors.reset}",
+            "Where do lizards go after their tails fall off? ${colors.cyan}${colors.italic}The retail store!${colors.reset}",
+            "What do you call a sleeping bull? ${colors.cyan}${colors.italic}A bulldozer!${colors.reset}",
+            "What's a cucumber's favorite instrument? ${colors.cyan}${colors.italic}The pickleo!${colors.reset}",
+            "Where does Jack Frost keep his money? ${colors.cyan}${colors.italic}In a snow bank!${colors.reset}"
         ]
         def random = new Random()
         def index = random.nextInt(messages.size())

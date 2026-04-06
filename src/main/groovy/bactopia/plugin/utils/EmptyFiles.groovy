@@ -63,11 +63,11 @@ class EmptyFiles {
      */
     static Boolean isEmptyFile(input) {
         if (input == null) {
-            return false
+            return true
         }
         def String s = input.toString()
         if (s.isEmpty()) {
-            return false
+            return true
         }
         return s.contains("data/empty/EMPTY")
     }

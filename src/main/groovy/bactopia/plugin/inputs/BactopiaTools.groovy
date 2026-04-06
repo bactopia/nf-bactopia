@@ -3,7 +3,6 @@ package bactopia.plugin.inputs
 import groovy.util.logging.Slf4j
 import java.nio.file.Path
 
-import static bactopia.plugin.utils.EmptyFiles.getEmptyPaths
 import static bactopia.plugin.utils.EmptyFiles.isEmptyFile
 import static bactopia.plugin.BactopiaUtils.fileExists
 import static bactopia.plugin.BactopiaTemplate.dashedLine
@@ -25,7 +24,6 @@ class BactopiaTools {
         // Check if params.bactopia exists, and if so loop through it
         def List samples = []
         def List missing = []
-        def Map EMPTY_PATHS = getEmptyPaths(params.empty_path)
         if (params.bactopia) {
             Path bactopiaPath = Path.of(params.bactopia)
             if (bactopiaPath.exists()) {
@@ -37,7 +35,7 @@ class BactopiaTools {
                             if (inclusions.contains(sample) || includeAll) {
                                 if (!exclusions.contains(sample)) {
                                     if (_isSampleDir(sample, params.bactopia)) {
-                                        def Map inputs = _collectInputs(sample, params.bactopia, params.workflow.ext, EMPTY_PATHS)
+                                        def Map inputs = _collectInputs(sample, params.bactopia, params.workflow.ext)
                                         if (inputs.missing_required) {
                                             missing << inputs.meta.id
                                         } else {
@@ -176,7 +174,7 @@ class BactopiaTools {
      * @param ext List of required input keys from the controlled vocabulary
      * @return Map containing collected inputs or error message
      */
-    private static Map _collectInputs(String sample, String dir, List<String> ext, Map EMPTY_PATHS) {
+    private static Map _collectInputs(String sample, String dir, List<String> ext) {
         def Map PATHS = [:]
         PATHS.blastdb   = "annotator"
         PATHS.fastq     = "qc"
@@ -204,17 +202,17 @@ class BactopiaTools {
         // Collect all possible input types using standardized key names
         def Map inputs = [
             'meta': ['id': sample, 'name': sample],
-            'tsv_meta': fileExists(tsvMetaPath) ? tsvMetaPath : EMPTY_PATHS.empty_meta,
-            'r1': fileExists(pe1Path) ? pe1Path : EMPTY_PATHS.empty_r1,
-            'r2': fileExists(pe2Path) ? pe2Path : EMPTY_PATHS.empty_r2,
-            'se': fileExists(sePath) && !isOnt ? sePath : EMPTY_PATHS.empty_se,
-            'lr': fileExists(sePath) && isOnt ? sePath : EMPTY_PATHS.empty_ont,
-            'fna': fileExists(fnaPath) ? fnaPath : fileExists("${fnaPath}.gz") ? "${fnaPath}.gz" : EMPTY_PATHS.empty_assembly,
-            'faa': EMPTY_PATHS.empty_proteins,
-            'fna_anno': EMPTY_PATHS.empty_assembly,
-            'gbk': EMPTY_PATHS.empty_gbk,
-            'gff': EMPTY_PATHS.empty_gff,
-            'blastdb': EMPTY_PATHS.empty_blastdb,
+            'tsv_meta': fileExists(tsvMetaPath) ? tsvMetaPath : null,
+            'r1': fileExists(pe1Path) ? pe1Path : null,
+            'r2': fileExists(pe2Path) ? pe2Path : null,
+            'se': fileExists(sePath) && !isOnt ? sePath : null,
+            'lr': fileExists(sePath) && isOnt ? sePath : null,
+            'fna': fileExists(fnaPath) ? fnaPath : fileExists("${fnaPath}.gz") ? "${fnaPath}.gz" : null,
+            'faa': null,
+            'fna_anno': null,
+            'gbk': null,
+            'gff': null,
+            'blastdb': null,
             'missing_required': false
         ]
 
@@ -274,7 +272,7 @@ class BactopiaTools {
 
             // No acceptable reads found -- force missing_required
             if (!readFound) {
-                required_files << EMPTY_PATHS.empty_r1
+                inputs['missing_required'] = true
             }
         }
 

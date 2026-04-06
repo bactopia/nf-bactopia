@@ -23,8 +23,7 @@ class BactopiaExtensionTest extends Specification {
         mockSession = Mock(Session) {
             getParams() >> [
                 monochrome_logs: true,
-                outdir: '/tmp/test',
-                empty_path: tempDir.toString()
+                outdir: '/tmp/test'
             ]
             getConfig() >> [
                 navigate: { key -> [:] }
