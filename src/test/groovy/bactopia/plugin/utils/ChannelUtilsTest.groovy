@@ -4,6 +4,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
+import nextflow.util.RecordMap
 import spock.lang.Specification
 
 /**
@@ -28,7 +29,8 @@ class ChannelUtilsTest extends Specification {
         when: 'gather is called'
         def result = ChannelUtils.gather(records, 'tsv', [name: 'sccmec'])
 
-        then: 'result should be a record-like map with meta and collected field'
+        then: 'result should be a RecordMap with meta and collected field'
+        result instanceof RecordMap
         result.meta == [name: 'sccmec']
         result.tsv instanceof Set
         result.tsv.size() == 3
@@ -174,7 +176,8 @@ class ChannelUtilsTest extends Specification {
         when: 'gatherCsvtk is called'
         def result = ChannelUtils.gatherCsvtk(records, 'tsv', [name: 'abricate'])
 
-        then: 'result should have csv field, not tsv'
+        then: 'result should be a RecordMap with csv field, not tsv'
+        result instanceof RecordMap
         result.meta == [name: 'abricate']
         result.csv instanceof Set
         result.csv.size() == 2
@@ -356,8 +359,9 @@ class ChannelUtilsTest extends Specification {
         when: 'filterWithData is called'
         def result = ChannelUtils.filterWithData(records, ['r1', 'r2'])
 
-        then: 'only records with at least one non-null field should remain'
+        then: 'only records with at least one non-null field should remain as RecordMaps'
         result.size() == 2
+        result[0] instanceof RecordMap
         result[0].meta.id == 'sample1'
         result[0].r1 == 'read1.fq'
         result[0].r2 == 'read2.fq'
@@ -482,8 +486,9 @@ class ChannelUtilsTest extends Specification {
         when: 'combineWith is called'
         def result = ChannelUtils.combineWith(gathered, items, 'reference')
 
-        then: 'result should have one entry per item with the field merged in'
+        then: 'result should have one RecordMap entry per item with the field merged in'
         result.size() == 2
+        result[0] instanceof RecordMap
         result[0].meta == [name: 'fastani']
         result[0].query == ['a.fna', 'b.fna'].toSet()
         result[0].reference == 'ref1.fna'

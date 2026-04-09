@@ -1,23 +1,37 @@
 # bactopia/nf-bactopia: Changelog
 
-## v1.1.0
+## v2.0.0
+
+### `Added`
+
+- New channel functions for record-based workflows:
+    - `gatherCsvtk()` - gather a single field and rename to `csv` for CSVTK_CONCAT input
+    - `gatherFields()` - gather multiple fields with explicit rename mapping
+    - `collectNextflowLogs()` - expand record `nf_logs` into `[meta, file]` tuples for publishing
+    - `combineWith()` - cartesian product combining gathered channels with multi-item channels (replaces deprecated Nextflow `each` input qualifier)
 
 ### `Changed`
 
-- **Breaking:** Simplified `gather()` API for Nextflow record types
+- **Breaking:** Bumped minimum Nextflow version to `26.03.1-edge`
+- **Breaking:** `gather()` now returns record-like maps instead of `[meta, outputSet]` tuples
     - New signature: `gather(Object chResults, String field, Map meta)`
     - `field` is now a required positional parameter specifying the record field to extract
     - `meta` is a required Map that passes through as-is to output (must contain `name`)
     - Output meta key changed from `id` to `name`
     - Removed deprecated tuple mode entirely
+- **Breaking:** Removed `flattenPaths()` function (replaced by `gatherFields()` and `combineWith()`)
+- **Breaking:** Removed empty file placeholders — input maps now use empty lists (`[]`) instead of `EMPTY_PATHS` sentinel files
+    - `collectBactopiaInputs()`, `processFOFN()`, `processAccessions()`, `processAccession()` no longer require `empty_path` parameter
+    - `_collectInputs()` in BactopiaTools no longer requires `EMPTY_PATHS` parameter
 - Updated input return types from indexed tuples to named Maps for record type compatibility
     - `collectBactopiaInputs()`, `processFOFN()`, `processAccessions()`, `processAccession()` now return Maps with named keys (`meta`, `r1`, `r2`, `se`, `lr`, `assembly`)
-    - `_collectInputs()` in BactopiaTools now requires `EMPTY_PATHS` parameter
+- Refactored `gather()` internals to use a private `_gather()` method with field mapping support
 
 ### `Fixed`
 
 - Fixed `BactopiaSchema.cleanParameters()` converting `LinkedHashMap` values to String instead of recursively cleaning them as nested Maps
-- Fixed all tests to align with record type refactor (map-based access, updated method signatures, `empty_path` parameter)
+- Fixed `.endsWith()` calls on database path parameters (`bakta_db`, `eggnog_db`, `gtdb`, `kraken2_db`) to use `.toString()` to handle non-String types
+- Fixed all tests to align with record type refactor and empty file removal
 
 ## v1.0.9
 

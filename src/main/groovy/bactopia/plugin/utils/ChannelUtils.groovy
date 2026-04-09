@@ -18,6 +18,7 @@ package bactopia.plugin.utils
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.util.RecordMap
 
 /**
  * Utility class for channel manipulation operations in Bactopia pipelines.
@@ -72,7 +73,7 @@ class ChannelUtils {
                         result[outputKey] = values
                     }
                     def boolean hasData = fieldMapping.values().any { String key -> !result[key].isEmpty() }
-                    hasData ? [result] : []
+                    hasData ? [new RecordMap(result)] : []
                 }
         } else {
             // List-based
@@ -82,7 +83,7 @@ class ChannelUtils {
                 result[outputKey] = values
             }
             def boolean hasData = fieldMapping.values().any { String key -> !result[key].isEmpty() }
-            return hasData ? result : []
+            return hasData ? new RecordMap(result) : []
         }
     }
 
@@ -162,7 +163,7 @@ class ChannelUtils {
             for (f in fields) {
                 projected[f] = r[f]
             }
-            return projected
+            return new RecordMap(projected)
         }
 
         if (input instanceof DataflowReadChannel || input instanceof DataflowWriteChannel) {
@@ -233,7 +234,7 @@ class ChannelUtils {
             return gathered.combine(items).map { List tuple ->
                 def Map result = new LinkedHashMap(tuple[0] as Map)
                 result[field] = tuple[1]
-                return result
+                return new RecordMap(result)
             }
         } else {
             // List-based: standard cartesian product with merge
@@ -244,7 +245,7 @@ class ChannelUtils {
                 itemsList.each { item ->
                     def Map merged = new LinkedHashMap(g)
                     merged[field] = item
-                    results << merged
+                    results << new RecordMap(merged)
                 }
             }
             return results
