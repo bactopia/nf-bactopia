@@ -1,0 +1,32 @@
+name: Publish nf-bactopia
+on:
+  release:
+    types: [published]
+jobs:
+  release:
+    name: Publish to Nextflow Plugin Registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          architecture: x64
+          distribution: 'temurin'
+
+      - name: Run tests
+        run: ./gradlew test
+        env:
+          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+
+      - name: Publish plugin
+        run: make release
+        env:
+          NPR_API_KEY: ${{ secrets.NPR_API_KEY }}

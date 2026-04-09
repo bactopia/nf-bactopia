@@ -17,8 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [17]
-        nextflow_version: ['25.10.0']
+        java_version: [17, 21]
 
     steps:
       - name: Environment
@@ -51,14 +50,11 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Install plugin
-        run: make install
-        
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-nf-${{ matrix.nextflow_version }}
+          name: test-results-java-${{ matrix.java_version }}
           path: |
             build/reports/jacoco/
             build/reports/tests/
