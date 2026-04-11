@@ -1,6 +1,7 @@
 package bactopia.plugin.inputs
 
 import groovy.util.logging.Slf4j
+import nextflow.util.RecordMap
 
 @Slf4j
 class Bactopia {
@@ -29,7 +30,7 @@ class Bactopia {
             if (runtype == "paired-end") {
                 meta.single_end = false
                 return [[
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [params.r1],
                     'r2': [params.r2],
                     'se': [],
@@ -39,7 +40,7 @@ class Bactopia {
             } else if (runtype == "single-end") {
                 meta.single_end = true
                 return [[
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [],
                     'r2': [],
                     'se': [params.se],
@@ -49,7 +50,7 @@ class Bactopia {
             } else if (runtype == "hybrid" || runtype == "short_polish") {
                 meta.single_end = runtype == "short_polish" ? true : false
                 return [[
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [params.r1],
                     'r2': [params.r2],
                     'se': [],
@@ -58,7 +59,7 @@ class Bactopia {
                 ]]
             } else if (runtype == "assembly") {
                 return [[
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [],
                     'r2': [],
                     'se': [],
@@ -68,7 +69,7 @@ class Bactopia {
             } else if (runtype == "ont") {
                 meta.single_end = true
                 return [[
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [],
                     'r2': [],
                     'se': [],
@@ -167,7 +168,7 @@ class Bactopia {
             if (line.runtype == 'ont') {
                 meta.single_end = true
                 return [
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [],
                     'r2': [],
                     'se': [],
@@ -177,7 +178,7 @@ class Bactopia {
             } else if (line.runtype == 'single-end') {
                 meta.single_end = true
                 return [
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [],
                     'r2': [],
                     'se': [line.se],
@@ -187,7 +188,7 @@ class Bactopia {
             } else if (line.runtype == 'paired-end') {
                 meta.single_end = false
                 return [
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [line.r1],
                     'r2': [line.r2],
                     'se': [],
@@ -199,7 +200,7 @@ class Bactopia {
                 // hybrid = Illumina primary reads, so paired-end
                 meta.single_end = line.runtype == 'short_polish' ? true : false
                 return [
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [line.r1],
                     'r2': [line.r2],
                     'se': [],
@@ -208,7 +209,7 @@ class Bactopia {
                 ]
             } else if (line.runtype == 'assembly') {
                 return [
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [],
                     'r2': [],
                     'se': [],
@@ -218,7 +219,7 @@ class Bactopia {
             } else if (line.runtype == 'merge-pe') {
                 meta.single_end = false
                 return [
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': handleMultipleFqs(line.r1),
                     'r2': handleMultipleFqs(line.r2),
                     'se': [],
@@ -230,7 +231,7 @@ class Bactopia {
                 // hybrid = Illumina primary reads, so paired-end
                 meta.single_end = line.runtype == 'short_polish-merge-pe' ? true : false
                 return [
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': handleMultipleFqs(line.r1),
                     'r2': handleMultipleFqs(line.r2),
                     'se': [],
@@ -240,7 +241,7 @@ class Bactopia {
             } else if (line.runtype == 'merge-se') {
                 meta.single_end = true
                 return [
-                    'meta': meta,
+                    'meta': new RecordMap(meta),
                     'r1': [],
                     'r2': [],
                     'se': handleMultipleFqs(line.se),
@@ -312,7 +313,7 @@ class Bactopia {
             meta.genome_size = params.genome_size
             meta.species = params.species
             return [
-                'meta': meta,
+                'meta': new RecordMap(meta),
                 'r1': [],
                 'r2': [],
                 'se': [],
@@ -330,7 +331,7 @@ class Bactopia {
             // if species is provided, use it, otherwise use the species from the FOFN
             meta.species = params.species ? params.species : line.species
             return [
-                'meta': meta,
+                'meta': new RecordMap(meta),
                 'r1': [],
                 'r2': [],
                 'se': [],
@@ -377,7 +378,7 @@ class Bactopia {
                 )
             }
             return [[
-                'meta': meta,
+                'meta': new RecordMap(meta),
                 'r1': [],
                 'r2': [],
                 'se': [],

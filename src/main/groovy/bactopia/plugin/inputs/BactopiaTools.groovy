@@ -2,6 +2,7 @@ package bactopia.plugin.inputs
 
 import groovy.util.logging.Slf4j
 import java.nio.file.Path
+import nextflow.util.RecordMap
 
 import static bactopia.plugin.utils.EmptyFiles.isEmptyFile
 import static bactopia.plugin.BactopiaUtils.fileExists
@@ -285,6 +286,9 @@ class BactopiaTools {
                 inputs[key] = Path.of(value.toString())
             }
         }
+
+        // Promote meta to RecordMap so downstream Nextflow processes receive a Record
+        inputs['meta'] = new RecordMap(inputs['meta'] as Map)
 
         return inputs
     }

@@ -1,5 +1,14 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.0.1
+
+### `Fixed`
+
+- Ensured `meta` is always a `nextflow.util.RecordMap` so downstream Nextflow processes receive a proper Record type instead of a plain `Map`:
+    - `collectBactopiaInputs()`, `processFOFN()`, `processAccession()`, and `processAccessions()` in [Bactopia.groovy](src/main/groovy/bactopia/plugin/inputs/Bactopia.groovy) now wrap `meta` in `RecordMap` on every runtype return path (paired-end, single-end, hybrid, short_polish, assembly, ont, merge-pe, merge-se)
+    - `_collectInputs()` in [BactopiaTools.groovy](src/main/groovy/bactopia/plugin/inputs/BactopiaTools.groovy) promotes `inputs['meta']` to `RecordMap` before returning
+    - `gather()` / `_gather()` and `gatherFields()` in [ChannelUtils.groovy](src/main/groovy/bactopia/plugin/utils/ChannelUtils.groovy) promote `meta` via a new idempotent `_asRecordMap()` helper in both channel and list code paths
+
 ## v2.0.0
 
 ### `Added`

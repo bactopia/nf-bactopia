@@ -30,6 +30,14 @@ import nextflow.util.RecordMap
 class ChannelUtils {
 
     /**
+     * Promote a meta value to a RecordMap if it isn't already one.
+     * Idempotent: passing an existing RecordMap returns it unchanged.
+     */
+    private static RecordMap _asRecordMap(Object meta) {
+        meta instanceof RecordMap ? (RecordMap) meta : new RecordMap(meta as Map)
+    }
+
+    /**
      * Core gather implementation. Extracts fields from a channel of records,
      * collects all values into sets, and wraps with a meta map into a record-like map.
      *
@@ -67,7 +75,7 @@ class ChannelUtils {
                     extracted
                 }
                 .flatMap { List<Map> collected ->
-                    def Map result = [meta: meta]
+                    def Map result = [meta: _asRecordMap(meta)]
                     fieldMapping.values().each { String outputKey ->
                         def Set values = collected.collect { v -> v[outputKey] }.findAll { v -> v != null }.toSet()
                         result[outputKey] = values
@@ -77,7 +85,7 @@ class ChannelUtils {
                 }
         } else {
             // List-based
-            def Map result = [meta: meta]
+            def Map result = [meta: _asRecordMap(meta)]
             fieldMapping.each { String inputKey, String outputKey ->
                 def Set values = chResults.collect { r -> r[inputKey] }.findAll { v -> v != null }.toSet()
                 result[outputKey] = values
@@ -159,7 +167,7 @@ class ChannelUtils {
                 return true
             }) return null
             def projected = new LinkedHashMap()
-            projected['meta'] = r['meta']
+            projected['meta'] = _asRecordMap(r['meta'])
             for (f in fields) {
                 projected[f] = r[f]
             }
