@@ -166,9 +166,9 @@ class BactopiaTest extends Specification {
     def 'processFOFN should parse TSV file'() {
         given: 'a FOFN file with sample data'
         def fofnFile = tempDir.resolve('samples.tsv').toFile()
-        fofnFile.text = '''sample\truntype\tr1\tr2\tgenome_size\tspecies
-sample1\tpaired-end\t/path/to/r1.fq\t/path/to/r2.fq\t5000000\tE. coli
-sample2\tsingle-end\t/path/to/se.fq\t\t4500000\tS. aureus'''
+        fofnFile.text = '''sample\truntype\tr1\tr2\tse\tont\tassembly\tgenome_size\tspecies
+sample1\tpaired-end\t/path/to/r1.fq\t/path/to/r2.fq\t\t\t\t5000000\tE. coli
+sample2\tsingle-end\t\t\t/path/to/se.fq\t\t\t4500000\tS. aureus'''
 
         def params = [
             samples: fofnFile.absolutePath,
@@ -190,10 +190,10 @@ sample2\tsingle-end\t/path/to/se.fq\t\t4500000\tS. aureus'''
     def 'processFOFN should skip empty lines'() {
         given: 'a FOFN file with empty lines'
         def fofnFile = tempDir.resolve('samples.tsv').toFile()
-        fofnFile.text = '''sample\truntype\tr1
-sample1\tpaired-end\t/path/to/r1.fq
+        fofnFile.text = '''sample\truntype\tr1\tr2\tse\tont\tassembly\tgenome_size\tspecies
+sample1\tpaired-end\t/path/to/r1.fq\t\t\t\t\t\t
 
-sample2\tsingle-end\t/path/to/se.fq'''
+sample2\tsingle-end\t\t\t/path/to/se.fq\t\t\t\t'''
 
         def params = [
             samples: fofnFile.absolutePath,
@@ -211,8 +211,8 @@ sample2\tsingle-end\t/path/to/se.fq'''
     def 'processFOFN should use params genome_size if provided'() {
         given: 'a FOFN file and params with genome_size'
         def fofnFile = tempDir.resolve('samples.tsv').toFile()
-        fofnFile.text = '''sample\truntype\tr1\tgenome_size
-sample1\tpaired-end\t/path/to/r1.fq\t3000000'''
+        fofnFile.text = '''sample\truntype\tr1\tr2\tse\tont\tassembly\tgenome_size\tspecies
+sample1\tpaired-end\t/path/to/r1.fq\t\t\t\t\t3000000\t'''
 
         def params = [
             samples: fofnFile.absolutePath,
@@ -230,8 +230,8 @@ sample1\tpaired-end\t/path/to/r1.fq\t3000000'''
     def 'processFOFN should handle merge-pe runtype'() {
         given: 'a FOFN file with merge-pe runtype'
         def fofnFile = tempDir.resolve('samples.tsv').toFile()
-        fofnFile.text = '''sample\truntype\tr1\tr2
-sample1\tmerge-pe\t/path/r1_1.fq,/path/r1_2.fq\t/path/r2_1.fq,/path/r2_2.fq'''
+        fofnFile.text = '''sample\truntype\tr1\tr2\tse\tont\tassembly\tgenome_size\tspecies
+sample1\tmerge-pe\t/path/r1_1.fq,/path/r1_2.fq\t/path/r2_1.fq,/path/r2_2.fq\t\t\t\t\t'''
 
         def params = [
             samples: fofnFile.absolutePath,
@@ -269,6 +269,157 @@ SRX12345678\tillumina\t5000000\tE. coli'''
         result[0].meta.runtype == 'assembly_accession'
         result[1].meta.id == 'SRX12345678'
         result[1].meta.runtype == 'sra_accession'
+    }
+
+    def 'processFOFN should return empty list when sample header is missing'() {
+        given: 'a FOFN file without a sample column'
+        def fofnFile = tempDir.resolve('bad_samples.tsv').toFile()
+        fofnFile.text = '''name\truntype\tr1
+sample1\tpaired-end\t/path/to/r1.fq'''
+
+        def params = [
+            samples: fofnFile.absolutePath,
+            genome_size: null,
+            species: null
+        ]
+
+        when: 'processFOFN is called'
+        def result = Bactopia.processFOFN(params)
+
+        then: 'result should be empty'
+        result.size() == 0
+    }
+
+    def 'processFOFN should return empty list when only sample column present'() {
+        given: 'a FOFN file with only a sample column'
+        def fofnFile = tempDir.resolve('single_col.tsv').toFile()
+        fofnFile.text = '''sample
+sample1'''
+
+        def params = [
+            samples: fofnFile.absolutePath,
+            genome_size: null,
+            species: null
+        ]
+
+        when: 'processFOFN is called'
+        def result = Bactopia.processFOFN(params)
+
+        then: 'result should be empty because runtype is missing'
+        result.size() == 0
+    }
+
+    def 'processFOFN should return empty list when headers are completely wrong'() {
+        given: 'a FOFN file with unrecognized headers'
+        def fofnFile = tempDir.resolve('wrong_headers.tsv').toFile()
+        fofnFile.text = '''col1\tcol2\tcol3
+val1\tval2\tval3'''
+
+        def params = [
+            samples: fofnFile.absolutePath,
+            genome_size: null,
+            species: null
+        ]
+
+        when: 'processFOFN is called'
+        def result = Bactopia.processFOFN(params)
+
+        then: 'result should be empty'
+        result.size() == 0
+    }
+
+    def 'processFOFN should return empty list for header-only file'() {
+        given: 'a FOFN file with only headers'
+        def fofnFile = tempDir.resolve('header_only.tsv').toFile()
+        fofnFile.text = 'sample\truntype\tr1\tr2\tse\tont\tassembly\tgenome_size\tspecies'
+
+        def params = [
+            samples: fofnFile.absolutePath,
+            genome_size: null,
+            species: null
+        ]
+
+        when: 'processFOFN is called'
+        def result = Bactopia.processFOFN(params)
+
+        then: 'result should be empty but no error'
+        result.size() == 0
+    }
+
+    def 'processFOFN should return empty list when sample header has wrong case'() {
+        given: 'a FOFN file with Sample instead of sample'
+        def fofnFile = tempDir.resolve('case_samples.tsv').toFile()
+        fofnFile.text = '''Sample\truntype\tr1
+sample1\tpaired-end\t/path/to/r1.fq'''
+
+        def params = [
+            samples: fofnFile.absolutePath,
+            genome_size: null,
+            species: null
+        ]
+
+        when: 'processFOFN is called'
+        def result = Bactopia.processFOFN(params)
+
+        then: 'result should be empty due to case mismatch'
+        result.size() == 0
+    }
+
+    def 'processAccessions should return empty list when accession header is missing'() {
+        given: 'an accessions file without an accession column'
+        def accessionsFile = tempDir.resolve('bad_accessions.tsv').toFile()
+        accessionsFile.text = '''id\truntype
+GCF_000001405.1\t'''
+
+        def params = [
+            accessions: accessionsFile.absolutePath,
+            genome_size: null,
+            species: null
+        ]
+
+        when: 'processAccessions is called'
+        def result = Bactopia.processAccessions(params)
+
+        then: 'result should be empty'
+        result.size() == 0
+    }
+
+    def 'processAccessions should return empty list when only accession column present'() {
+        given: 'an accessions file with only an accession column'
+        def accessionsFile = tempDir.resolve('single_col_accessions.tsv').toFile()
+        accessionsFile.text = '''accession
+GCF_000001405.1'''
+
+        def params = [
+            accessions: accessionsFile.absolutePath,
+            genome_size: null,
+            species: null
+        ]
+
+        when: 'processAccessions is called'
+        def result = Bactopia.processAccessions(params)
+
+        then: 'result should be empty because runtype is missing'
+        result.size() == 0
+    }
+
+    def 'processAccessions should return empty list when accession header has wrong case'() {
+        given: 'an accessions file with Accession instead of accession'
+        def accessionsFile = tempDir.resolve('case_accessions.tsv').toFile()
+        accessionsFile.text = '''Accession\truntype
+GCF_000001405.1\t'''
+
+        def params = [
+            accessions: accessionsFile.absolutePath,
+            genome_size: null,
+            species: null
+        ]
+
+        when: 'processAccessions is called'
+        def result = Bactopia.processAccessions(params)
+
+        then: 'result should be empty due to case mismatch'
+        result.size() == 0
     }
 
     def 'processAccession should handle GCF assembly accession'() {
@@ -360,8 +511,8 @@ SRX12345678\tillumina\t5000000\tE. coli'''
     def 'collectBactopiaInputs should delegate to processFOFN for is_fofn runtype'() {
         given: 'a FOFN file'
         def fofnFile = tempDir.resolve('samples.tsv').toFile()
-        fofnFile.text = '''sample\truntype\tr1
-sample1\tsingle-end\t/path/to/r1.fq'''
+        fofnFile.text = '''sample\truntype\tr1\tr2\tse\tont\tassembly\tgenome_size\tspecies
+sample1\tsingle-end\t\t\t/path/to/r1.fq\t\t\t\t'''
 
         def params = [
             samples: fofnFile.absolutePath,
@@ -380,8 +531,8 @@ sample1\tsingle-end\t/path/to/r1.fq'''
     def 'collectBactopiaInputs should delegate to processAccessions for is_accessions runtype'() {
         given: 'an accessions file'
         def accessionsFile = tempDir.resolve('accessions.tsv').toFile()
-        accessionsFile.text = '''accession
-GCF_000001405.1'''
+        accessionsFile.text = '''accession\truntype\tspecies\tgenome_size
+GCF_000001405.1\t\t\t'''
 
         def params = [
             accessions: accessionsFile.absolutePath,

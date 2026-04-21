@@ -107,16 +107,27 @@ class Bactopia {
         def results = []
         def headers = null
         def isFirstLine = true
-        
+        def hasValidHeaders = true
+
         // Read the samples file (TSV format)
         new File(params.samples).splitEachLine('\t') { columns ->
             // Strip whitespace from each column
             columns = columns.collect { it.trim() }
-            
+
             if (isFirstLine) {
                 headers = columns
                 isFirstLine = false
-            } else if (columns.size() > 0 && columns[0]) { // Skip empty lines
+                def requiredHeaders = ['sample', 'runtype', 'genome_size', 'species', 'r1', 'r2', 'se', 'ont', 'assembly']
+                def missingHeaders = requiredHeaders.findAll { !headers.contains(it) }
+                if (missingHeaders) {
+                    log.error(
+                        "Missing required column(s) ${missingHeaders.collect { "'${it}'" }.join(', ')} " +
+                        "in ${params.samples}. Found columns: ${headers.join(', ')}.\n\n" +
+                        "Please use 'bactopia prepare' to generate a properly formatted FOFN file."
+                    )
+                    hasValidHeaders = false
+                }
+            } else if (hasValidHeaders && columns.size() > 0 && columns[0]) { // Skip empty lines
                 // Create map from headers and values
                 def line = [:]
                 headers.eachWithIndex { header, index ->
@@ -260,7 +271,7 @@ class Bactopia {
     }
 
     /**
-     * Process accessions from CSV file.
+     * Process accessions from TSV file.
      *
      * @param params The workflow parameters
      * @return List of Maps of processed accession data structures
@@ -269,16 +280,27 @@ class Bactopia {
         def results = []
         def headers = null
         def isFirstLine = true
-        
+        def hasValidHeaders = true
+
         // Read the accessions file (TSV format)
         new File(params.accessions).splitEachLine('\t') { columns ->
             // Strip whitespace from each column
             columns = columns.collect { it.trim() }
-            
+
             if (isFirstLine) {
                 headers = columns
                 isFirstLine = false
-            } else if (columns.size() > 0 && columns[0]) { // Skip empty lines
+                def requiredHeaders = ['accession', 'runtype', 'species', 'genome_size']
+                def missingHeaders = requiredHeaders.findAll { !headers.contains(it) }
+                if (missingHeaders) {
+                    log.error(
+                        "Missing required column(s) ${missingHeaders.collect { "'${it}'" }.join(', ')} " +
+                        "in ${params.accessions}. Found columns: ${headers.join(', ')}.\n\n" +
+                        "Please use 'bactopia search' to generate a properly formatted accessions file."
+                    )
+                    hasValidHeaders = false
+                }
+            } else if (hasValidHeaders && columns.size() > 0 && columns[0]) { // Skip empty lines
                 // Create map from headers and values
                 def row = [:]
                 headers.eachWithIndex { header, index ->

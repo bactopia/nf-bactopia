@@ -1,5 +1,14 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.0.3
+
+### `Fixed`
+
+- Added header validation to `processFOFN()` and `processAccessions()` — both now check that the first line contains all required columns before processing data rows
+    - `processFOFN()` requires: `sample`, `runtype`, `r1`, `r2`, `se`, `ont`, `assembly`, `genome_size`, `species`
+    - `processAccessions()` requires: `accession`, `runtype`, `species`, `genome_size`
+    - Missing columns produce a clear error listing found vs expected columns and suggest using `bactopia prepare` or `bactopia search` to generate properly formatted files
+
 ## v2.0.2
 
 ### `Fixed`

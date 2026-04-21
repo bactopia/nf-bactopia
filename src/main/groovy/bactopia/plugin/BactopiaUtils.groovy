@@ -264,7 +264,7 @@ class BactopiaUtils {
         paramsMap.each { key, value ->
             paramsMap[key] = flattenNestedParamsMap(value as Map)
         }
-        def maxChars  = getLongestKeyLength(paramsMap)
+        def maxChars = getLongestKeyLength(paramsMap)
         for (group in paramsMap.keySet()) {
             def Map group_params = paramsMap.get(group) as Map // This gets the parameters of that particular group
             if (group_params) {
