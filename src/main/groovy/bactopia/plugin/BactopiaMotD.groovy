@@ -109,7 +109,11 @@ class BactopiaMotD {
             "Where do lizards go after their tails fall off? ${colors.cyan}${colors.italic}The retail store!${colors.reset}",
             "What do you call a sleeping bull? ${colors.cyan}${colors.italic}A bulldozer!${colors.reset}",
             "What's a cucumber's favorite instrument? ${colors.cyan}${colors.italic}The pickleo!${colors.reset}",
-            "Where does Jack Frost keep his money? ${colors.cyan}${colors.italic}In a snow bank!${colors.reset}"
+            "Where does Jack Frost keep his money? ${colors.cyan}${colors.italic}In a snow bank!${colors.reset}",
+            "What do you call a happy cowboy? ${colors.cyan}${colors.italic}A jolly rancher!${colors.reset}",
+            "What do you call a cow with no legs? ${colors.cyan}${colors.italic}Ground beef!${colors.reset}",
+            "What bait does a librarian use to catch fish? ${colors.cyan}${colors.italic}Bookworms!${colors.reset}",
+            "Why did the banana go to the doctor? ${colors.cyan}${colors.italic}Because it wasn't peeling well!${colors.reset}"
         ]
         def random = new Random()
         def index = random.nextInt(messages.size())

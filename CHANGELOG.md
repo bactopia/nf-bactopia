@@ -1,5 +1,11 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.0.2
+
+### `Fixed`
+
+- Fixed `--help_all` crashing with `GroovyRuntimeException` by casting `params["help_all"]` to `Boolean` before passing to `HelpMessageCreator` constructor (CLI params arrive as strings)
+
 ## v2.0.1
 
 ### `Fixed`

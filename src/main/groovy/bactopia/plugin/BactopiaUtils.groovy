@@ -179,7 +179,7 @@ class BactopiaUtils {
     public static String paramsHelp(Session session, BactopiaConfig config) {
         def Map params = session.params
         def String help = ""
-        def HelpMessageCreator helpCreator = new HelpMessageCreator(config, session, params["help_all"])
+        def HelpMessageCreator helpCreator = new HelpMessageCreator(config, session, params["help_all"] as Boolean)
         help += helpCreator.getBeforeText(session, (String) params["workflow"]["name"], (String) params["workflow"]["description"])
         if (params["help_all"]) {
             log.debug("Printing out the full help message")
