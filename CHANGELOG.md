@@ -2,12 +2,22 @@
 
 ## v2.0.3
 
+### `Added`
+
+- Added new Message of the Day joke
+
 ### `Fixed`
 
 - Added header validation to `processFOFN()` and `processAccessions()` — both now check that the first line contains all required columns before processing data rows
     - `processFOFN()` requires: `sample`, `runtype`, `r1`, `r2`, `se`, `ont`, `assembly`, `genome_size`, `species`
     - `processAccessions()` requires: `accession`, `runtype`, `species`, `genome_size`
     - Missing columns produce a clear error listing found vs expected columns and suggest using `bactopia prepare` or `bactopia search` to generate properly formatted files
+- Fixed SE/ONT read detection in `BactopiaTools._collectInputs()`:
+    - SE reads now use `{sample}_SE.fastq.gz` instead of `{sample}.fastq.gz`
+    - ONT reads now use separate `{sample}_ONT.fastq.gz` file path
+    - ONT detection changed from checking for NanoPlot HTML report to `ont.txt` marker file
+    - PE read detection now correctly excludes ONT samples
+- Fixed `JsonSchemaValidator` rejecting string `"true"`/`"false"` values for boolean parameters — CLI arguments arrive as strings, so the validator now accepts these as valid booleans
 
 ## v2.0.2
 
