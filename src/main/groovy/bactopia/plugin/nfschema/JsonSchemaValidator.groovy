@@ -99,6 +99,13 @@ public class JsonSchemaValidator {
                     }
                 }
 
+                // Command line arguments are interpreted as strings, check booleans are ok
+                if (errorString == "Value is [string] but should be [boolean]") {
+                    if (value.toString().toLowerCase() in ["true", "false"]) {
+                         return
+                    }
+                }
+
                 if(fieldName != "") {
                     printableError = "* --${fieldName} (${value}): ${errorString}" as String
                 }

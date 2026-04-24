@@ -188,17 +188,15 @@ class BactopiaTools {
 
         // Set up file paths
         def String baseDir = "${dir}/${sample}/main/"
-        def String sePath = "${baseDir}/${PATHS['fastq']}/${sample}.fastq.gz"
+        def String sePath = "${baseDir}/${PATHS['fastq']}/${sample}_SE.fastq.gz"
+        def String ontPath = "${baseDir}/${PATHS['fastq']}/${sample}_ONT.fastq.gz"
         def String pe1Path = "${baseDir}/${PATHS['fastq']}/${sample}_R1.fastq.gz"
         def String pe2Path = "${baseDir}/${PATHS['fastq']}/${sample}_R2.fastq.gz"
         def String fnaPath = "${baseDir}/${PATHS['fna']}/${sample}.fna"
         def String tsvMetaPath = "${baseDir}/${PATHS['tsv_meta']}/${sample}-meta.tsv"
 
         // Check if the SE reads are ONT or Illumina
-        def Boolean isOnt = false
-        if (fileExists("${baseDir}/${PATHS['fastq']}/supplemental/${sample}-final_NanoPlot-report.html")) {
-            isOnt = true
-        }
+        def Boolean isOnt = fileExists("${baseDir}/${PATHS['fna']}/supplemental/ont.txt")
 
         // Collect all possible input types using standardized key names
         def Map inputs = [
@@ -206,8 +204,8 @@ class BactopiaTools {
             'tsv_meta': fileExists(tsvMetaPath) ? tsvMetaPath : null,
             'r1': fileExists(pe1Path) ? pe1Path : null,
             'r2': fileExists(pe2Path) ? pe2Path : null,
-            'se': fileExists(sePath) && !isOnt ? sePath : null,
-            'lr': fileExists(sePath) && isOnt ? sePath : null,
+            'se': fileExists(sePath) ? sePath : null,
+            'lr': fileExists(ontPath) ? ontPath : null,
             'fna': fileExists(fnaPath) ? fnaPath : fileExists("${fnaPath}.gz") ? "${fnaPath}.gz" : null,
             'faa': null,
             'fna_anno': null,
@@ -245,15 +243,15 @@ class BactopiaTools {
         if (requestedReadKeys) {
             def boolean readFound = false
 
-            // Check for long reads (lr)
-            if ('lr' in requestedReadKeys && fileExists(sePath) && isOnt) {
+            // Check for long reads (lr) (short_polish or ont)
+            if ('lr' in requestedReadKeys && fileExists(ontPath) && isOnt) {
                 inputs['meta'].single_end = true
                 inputs['meta'].runtype = 'ont'
                 required_files << inputs['lr']
                 readFound = true
             }
 
-            // Check for SE illumina reads
+            // Check for SE illumina reads (single_end non-ONT)
             if (!readFound && 'se' in requestedReadKeys && fileExists(sePath) && !isOnt) {
                 inputs['meta'].single_end = true
                 inputs['meta'].runtype = 'illumina'
@@ -261,9 +259,9 @@ class BactopiaTools {
                 readFound = true
             }
 
-            // Check for PE illumina reads
+            // Check for PE illumina reads (hybrid or illumina_pe)
             if (!readFound && 'r1' in requestedReadKeys && 'r2' in requestedReadKeys
-                    && fileExists(pe1Path) && fileExists(pe2Path)) {
+                    && fileExists(pe1Path) && fileExists(pe2Path) && !isOnt) {
                 inputs['meta'].single_end = false
                 inputs['meta'].runtype = 'illumina'
                 required_files << inputs['r1']

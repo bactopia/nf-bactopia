@@ -113,7 +113,8 @@ class BactopiaMotD {
             "What do you call a happy cowboy? ${colors.cyan}${colors.italic}A jolly rancher!${colors.reset}",
             "What do you call a cow with no legs? ${colors.cyan}${colors.italic}Ground beef!${colors.reset}",
             "What bait does a librarian use to catch fish? ${colors.cyan}${colors.italic}Bookworms!${colors.reset}",
-            "Why did the banana go to the doctor? ${colors.cyan}${colors.italic}Because it wasn't peeling well!${colors.reset}"
+            "Why did the banana go to the doctor? ${colors.cyan}${colors.italic}Because it wasn't peeling well!${colors.reset}",
+            "How do planets entertain themselves? ${colors.cyan}${colors.italic}They read comet books!${colors.reset}"
         ]
         def random = new Random()
         def index = random.nextInt(messages.size())
