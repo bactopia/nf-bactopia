@@ -238,7 +238,7 @@ class BactopiaToolsTest extends Specification {
         given: 'SE fastq file'
         def qcDir = tempDir.resolve('sample1/main/qc')
         Files.createDirectories(qcDir)
-        qcDir.resolve('sample1.fastq.gz').text = 'reads'
+        qcDir.resolve('sample1_SE.fastq.gz').text = 'reads'
 
         when: '_collectInputs is called with r1, r2, se'
         def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), ['r1', 'r2', 'se'])
@@ -386,14 +386,16 @@ class BactopiaToolsTest extends Specification {
     }
 
     def '_collectInputs should handle ONT fastq files'() {
-        given: 'ONT fastq with NanoPlot report'
+        given: 'ONT fastq with ont.txt marker'
         def qcDir = tempDir.resolve('sample1/main/qc')
         Files.createDirectories(qcDir)
-        qcDir.resolve('sample1.fastq.gz').text = 'ont reads'
+        qcDir.resolve('sample1_ONT.fastq.gz').text = 'ont reads'
 
-        def suppDir = tempDir.resolve('sample1/main/qc/supplemental')
+        def assemblerDir = tempDir.resolve('sample1/main/assembler')
+        Files.createDirectories(assemblerDir)
+        def suppDir = tempDir.resolve('sample1/main/assembler/supplemental')
         Files.createDirectories(suppDir)
-        suppDir.resolve('sample1-final_NanoPlot-report.html').text = 'nanoplot'
+        suppDir.resolve('ont.txt').text = 'ont marker'
 
         when: '_collectInputs is called with fastq'
         def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), ['fastq'])
@@ -403,10 +405,10 @@ class BactopiaToolsTest extends Specification {
     }
 
     def '_collectInputs should detect Illumina fastq without NanoPlot'() {
-        given: 'fastq without NanoPlot report'
+        given: 'SE fastq without ont.txt marker'
         def qcDir = tempDir.resolve('sample1/main/qc')
         Files.createDirectories(qcDir)
-        qcDir.resolve('sample1.fastq.gz').text = 'illumina reads'
+        qcDir.resolve('sample1_SE.fastq.gz').text = 'illumina reads'
 
         when: '_collectInputs is called with fastq'
         def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), ['fastq'])
