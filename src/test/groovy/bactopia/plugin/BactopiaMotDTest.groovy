@@ -26,13 +26,10 @@ class BactopiaMotDTest extends Specification {
 
     def 'should return a message with color codes when colors enabled' () {
         when:
-        def motd = BactopiaMotD.getMotD(false)
-        
+        def messages = (1..20).collect { BactopiaMotD.getMotD(false) }
+
         then:
-        motd != null
-        motd.length() > 0
-        // Message is wrapped in colors, so it should contain ANSI codes
-        motd.contains("\033[") || motd.length() > 50 // Contains colors or has substantial content
+        messages.any { it.contains("\033[") }
     }
 
     def 'should return different messages on multiple calls' () {
