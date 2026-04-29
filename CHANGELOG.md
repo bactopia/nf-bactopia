@@ -1,5 +1,9 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.1.1
+
+- changed bactopia URL from https://bactopia.github.io/ to https://bactopia.io/
+
 ## v2.1.0
 
 - Bump minimum Nextflow version to 26.04.0

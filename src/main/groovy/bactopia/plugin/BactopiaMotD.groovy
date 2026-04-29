@@ -17,8 +17,8 @@ class BactopiaMotD {
         Map colors = getLogColors(monochrome_logs)
         def messages = [
             // Bactopia Related
-            "Learn more about Bactopia at https://bactopia.github.io/",
-            "Feeling stuck? Check out the docs at https://bactopia.github.io/",
+            "Learn more about Bactopia at https://bactopia.io/",
+            "Feeling stuck? Check out the docs at https://bactopia.io/",
             "Bactopia is a pipeline for the analysis of bacterial genomes.",
             "Bactopia was first released in February 2019.",
             "Bactopia is based on Staphopia which was specific to Staphylococcus aureus.",

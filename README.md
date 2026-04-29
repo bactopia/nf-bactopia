@@ -6,7 +6,7 @@
 
 ## Summary
 
-A Nextflow plugin providing utility functions for [Bactopia](https://bactopia.github.io/) pipelines.
+A Nextflow plugin providing utility functions for [Bactopia](https://bactopia.io/) pipelines.
 It handles input collection, parameter validation, channel manipulation, and sample data
 transformation. Based on the modified [nf-core libs](https://github.com/bactopia/bactopia/tree/4b075af96da522222bb075d4b65927d1ba3de9c2/lib)
 and the [nf-schema plugin](https://github.com/nextflow-io/nf-schema), this plugin replicates the
