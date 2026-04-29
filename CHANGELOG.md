@@ -1,5 +1,9 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.1.0
+
+- Bump minimum Nextflow version to 26.04.0
+
 ## v2.0.3
 
 ### `Added`

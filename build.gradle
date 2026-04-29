@@ -14,7 +14,7 @@ dependencies {
     implementation 'com.sanctionco.jmail:jmail:1.6.3' // Needed for e-mail format validation
 }
 
-version = '2.0.3'
+version = '2.1.0'
 
 jacoco {
     toolVersion = "0.8.11"
@@ -67,7 +67,7 @@ jacocoTestCoverageVerification {
 test.finalizedBy jacocoTestReport
 
 nextflowPlugin {
-    nextflowVersion = '26.03.1-edge'
+    nextflowVersion = '26.04.0'
 
     provider = 'bactopia'
     description = 'A plugin for working with Bactopia'
