@@ -92,9 +92,16 @@ public class JsonSchemaValidator {
             } else if (validationType == "parameter") {
                 def String fieldName = locationList.join(".")
 
-                // Command line arguments are interpreted as strings, check numbers are ok
+                // Command line arguments are interpreted as strings, check integers are ok
                 if (errorString == "Value is [string] but should be [integer]") {
                     if (value.isBigInteger()) {
+                        return
+                    }
+                }
+
+                // Command line arguments are interpreted as strings, check floats are ok
+                if (errorString == "Value is [string] but should be [number]") {
+                    if (value.isBigDecimal()) {
                         return
                     }
                 }

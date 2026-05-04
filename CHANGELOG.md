@@ -1,5 +1,9 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.1.2
+
+- test floats as strings are actually floats
+
 ## v2.1.1
 
 - changed bactopia URL from https://bactopia.github.io/ to https://bactopia.io/
