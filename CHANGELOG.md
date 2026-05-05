@@ -3,6 +3,7 @@
 ## v2.1.3
 
 - check `--nohuman_db` and `--use_srascrubber` are not both `null`/`false`
+- improve test coverage
 
 ## v2.1.2
 
