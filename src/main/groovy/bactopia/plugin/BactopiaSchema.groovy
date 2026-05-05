@@ -592,7 +592,7 @@ class BactopiaSchema {
                     error += 1
                 }
             }
-        } else if (params.workflow.name = "teton") {
+        } else if (params.workflow.name == "teton") {
             if (params.kraken2_db) {
                 if (isLocal(params.kraken2_db)) {
                     if (params.kraken2_db.toString().endsWith(".tar.gz")) {
@@ -601,7 +601,7 @@ class BactopiaSchema {
                         error += fileNotFound("${params.kraken2_db}/hash.k2d", "kraken2_db")
                     }
                 }
-            } else if (params.kraken2_db) {
+            } else {
                 log.error("Teton requires '--kraken2_db' to be provided")
                 error += 1
             }
