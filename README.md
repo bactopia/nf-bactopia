@@ -27,16 +27,16 @@ plugins {
 Then import the functions you need in your Nextflow scripts:
 
 ```groovy
-include { bactopiaInputs     } from 'plugin/nf-bactopia'
-include { bactopiaToolInputs } from 'plugin/nf-bactopia'
-include { validateParameters } from 'plugin/nf-bactopia'
-include { gather             } from 'plugin/nf-bactopia'
-include { gatherCsvtk        } from 'plugin/nf-bactopia'
-include { gatherFields       } from 'plugin/nf-bactopia'
-include { formatSamples      } from 'plugin/nf-bactopia'
-include { filterWithData     } from 'plugin/nf-bactopia'
+include { bactopiaInputs      } from 'plugin/nf-bactopia'
+include { bactopiaToolInputs  } from 'plugin/nf-bactopia'
+include { validateParameters  } from 'plugin/nf-bactopia'
+include { gather              } from 'plugin/nf-bactopia'
+include { gatherCsvtk         } from 'plugin/nf-bactopia'
+include { gatherFields        } from 'plugin/nf-bactopia'
+include { formatSamples       } from 'plugin/nf-bactopia'
+include { filterWithData      } from 'plugin/nf-bactopia'
 include { collectNextflowLogs } from 'plugin/nf-bactopia'
-include { combineWith        } from 'plugin/nf-bactopia'
+include { combineWith         } from 'plugin/nf-bactopia'
 ```
 
 ## Examples
@@ -45,20 +45,20 @@ include { combineWith        } from 'plugin/nf-bactopia'
 
 ```groovy
 // Collect all TSV outputs from a process into a single record
-gather(SCCMEC.out, 'tsv', [name: 'sccmec'])
+gather(SCCMEC, 'tsv', [name: 'sccmec'])
 
 // Gather and rename for CSVTK_CONCAT input
-gatherCsvtk(ARIBA_RUN.out, 'report', [name: 'ariba-report', args: '-C "$" --lazy-quotes'])
+gatherCsvtk(ARIBA_RUN, 'report', [name: 'ariba-report', args: '-C "$" --lazy-quotes'])
 
 // Gather multiple fields with explicit rename mapping
-gatherFields(MODULE.out, [gff: 'gff', tsv: 'tsv'], [name: 'prokka'])
+gatherFields(MODULE, [gff: 'gff', tsv: 'tsv'], [name: 'prokka'])
 ```
 
 ### Filtering and combining channels
 
 ```groovy
 // Filter records where at least one field has data
-filterWithData(MODULE.out, ['tsv', 'gff'])
+filterWithData(MODULE, ['tsv', 'gff'])
 
 // Cartesian product of gathered results with reference files
 combineWith(gathered_ch, references_ch, 'reference')
