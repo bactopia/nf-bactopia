@@ -1,5 +1,9 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.1.3
+
+- check `--nohuman_db` and `--use_srascrubber` are not both `null`/`false`
+
 ## v2.1.2
 
 - test floats as strings are actually floats

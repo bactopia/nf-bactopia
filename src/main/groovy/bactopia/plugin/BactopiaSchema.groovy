@@ -413,6 +413,21 @@ class BactopiaSchema {
             } else {
                 missing_required << "--scoary_traits"
             }
+        } else if (params.workflow.name == "scrubber") {
+            if (params.nohuman_db && !params.use_srascrubber) {
+                if (!params.download_nohuman) {
+                    if (isLocal(params.nohuman_db)) {
+                        if (params.nohuman_db.toString().endsWith(".tar.gz")) {
+                            error += fileNotFound(params.nohuman_db, "nohuman_db")
+                        } else {
+                            error += fileNotFound("${params.nohuman_db}/hash.k2d", "nohuman_db")
+                        }
+                    }
+                }
+            } else if (!params.nohuman_db && !params.use_srascrubber) {
+                log.error("Teton requires '--nohuman_db' or '--use_srascrubber' to be provided")
+                error += 1
+            }
         } else if (params.workflow.name == "snippy") {
             if (params.accession && params.reference) {
                 log.error("'--accession' and '--reference' cannot be used together")
@@ -422,14 +437,6 @@ class BactopiaSchema {
             } else if (!params.accession && !params.reference) {
                 log.error("Either '--accession' and '--reference' is required")
                 error += 1
-            }
-        } else if (params.workflow.name == "srahumanscrubber") {
-            if (params.scrubber_db) {
-                if (!params.download_scrubber) {
-                    error += fileNotFound(params.scrubber_db, "scrubber_db")
-                }
-            } else {
-                missing_required << "--scrubber_db"
             }
         } else if (params.workflow.name == "sylph") {
             if (params.sylph_db) {
@@ -596,6 +603,21 @@ class BactopiaSchema {
                 }
             } else if (params.kraken2_db) {
                 log.error("Teton requires '--kraken2_db' to be provided")
+                error += 1
+            }
+
+            if (params.nohuman_db && !params.use_srascrubber) {
+                if (!params.download_nohuman) {
+                    if (isLocal(params.nohuman_db)) {
+                        if (params.nohuman_db.toString().endsWith(".tar.gz")) {
+                            error += fileNotFound(params.nohuman_db, "nohuman_db")
+                        } else {
+                            error += fileNotFound("${params.nohuman_db}/hash.k2d", "nohuman_db")
+                        }
+                    }
+                }
+            } else if (!params.nohuman_db && !params.use_srascrubber) {
+                log.error("Teton requires '--nohuman_db' or '--use_srascrubber' to be provided")
                 error += 1
             }
         }
