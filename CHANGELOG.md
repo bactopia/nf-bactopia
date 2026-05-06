@@ -1,5 +1,10 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.1.4
+
+- refactor database path validation into `validateDbPath` helper to reduce duplication
+- add `--traitar_db` validation for the traitar workflow
+
 ## v2.1.3
 
 - check `--nohuman_db` and `--use_srascrubber` are not both `null`/`false`

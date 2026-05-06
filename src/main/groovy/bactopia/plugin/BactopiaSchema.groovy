@@ -269,6 +269,29 @@ class BactopiaSchema {
     // END - nextflow/nf-schema functions
 
     /**
+     * Validate a database path exists. If the path ends with .tar.gz, validates
+     * the archive directly; otherwise validates ${path}/${subfile}.
+     *
+     * @param opts      Optional: skipDownload (Boolean), checkLocal (Boolean)
+     * @param dbPath    The database path to validate
+     * @param paramName The parameter name (for error messages)
+     * @param subfile   The expected file inside an extracted database directory
+     * @return Integer error count (0 or 1)
+     */
+    private static Integer validateDbPath(Map opts = [:], Object dbPath, String paramName, String subfile) {
+        if (opts.skipDownload) {
+            return 0
+        }
+        if (opts.checkLocal && !isLocal(dbPath)) {
+            return 0
+        }
+        if (dbPath.toString().endsWith(".tar.gz")) {
+            return fileNotFound(dbPath, paramName)
+        }
+        return fileNotFound("${dbPath}/${subfile}", paramName)
+    }
+
+    /**
      * Validate Bactopia Tool parameters.
      *
      * @param params The workflow parameters
@@ -305,15 +328,10 @@ class BactopiaSchema {
             }
         } else if (params.workflow.name == "bakta") {
             if (params.bakta_db) {
-                if (!params.download_bakta) {
-                    if (params.bakta_db.toString().endsWith(".tar.gz")) {
-                        error += fileNotFound(params.bakta_db, "bakta_db")
-                    } else {
-                        error += fileNotFound("${params.bakta_db}/bakta.db", "bakta_db")
-                    }
-                }
+                error += validateDbPath(params.bakta_db, "bakta_db", "bakta.db",
+                                        skipDownload: params.download_bakta)
             } else {
-                missing_required << "--bakta_db"
+                missing_required << "--bakta_db (and --download_bakta if you want it to be automatically downloaded)"
             }
         } else if (params.workflow.name == "blastn") {
             if (params.blastn_query) {
@@ -335,15 +353,10 @@ class BactopiaSchema {
             }
         } else if (params.workflow.name == "eggnog") {
             if (params.eggnog_db) {
-                if (!params.download_eggnog) {
-                    if (params.eggnog_db.toString().endsWith(".tar.gz")) {
-                        error += fileNotFound(params.eggnog_db, "eggnog_db")
-                    } else {
-                        error += fileNotFound("${params.eggnog_db}/eggnog.db", "eggnog_db")
-                    }
-                }
+                error += validateDbPath(params.eggnog_db, "eggnog_db", "eggnog.db",
+                                        skipDownload: params.download_eggnog)
             } else {
-                missing_required << "--eggnog_db"
+                missing_required << "--eggnog_db (and --download_eggnog if you want it to be automatically downloaded)"
             }
         }  else if (params.workflow.name == "fastani") {
             if (!params.fastani_pairwise && !(params.fastani_reference || params.accession || params.accessions || params.species)) {
@@ -362,23 +375,14 @@ class BactopiaSchema {
             }
         } else if (params.workflow.name == "gtdb") {
             if (params.gtdb) {
-                if (!params.download_gtdb) {
-                    if (params.gtdb.toString().endsWith(".tar.gz")) {
-                        error += fileNotFound(params.gtdb, "gtdb")
-                    } else {
-                        error += fileNotFound("${params.gtdb}/metadata/metadata.txt", "gtdb")
-                    }
-                }
+                error += validateDbPath(params.gtdb, "gtdb", "metadata/metadata.txt",
+                                        skipDownload: params.download_gtdb)
             } else {
-                missing_required << "--gtdb"
+                missing_required << "--gtdb (and --download_gtdb if you want it to be automatically downloaded)"
             }
         } else if (params.workflow.name == "kraken2") {
             if (params.kraken2_db) {
-                if (params.kraken2_db.toString().endsWith(".tar.gz")) {
-                    error += fileNotFound(params.kraken2_db, "kraken2_db")
-                } else {
-                    error += fileNotFound("${params.kraken2_db}/hash.k2d", "kraken2_db")
-                }
+                error += validateDbPath(params.kraken2_db, "kraken2_db", "hash.k2d")
             } else {
                 missing_required << "--kraken2_db"
             }
@@ -390,11 +394,7 @@ class BactopiaSchema {
             }
         } else if (params.workflow.name == "midas") {
             if (params.midas_db) {
-                if (params.midas_db.toString().endsWith(".tar.gz")) {
-                    error += fileNotFound(params.midas_db, "midas_db")
-                } else {
-                    error += fileNotFound("${params.midas_db}/genome_info.txt", "midas_db")
-                }
+                error += validateDbPath(params.midas_db, "midas_db", "genome_info.txt")
             } else {
                 missing_required << "--midas_db"
             }
@@ -415,15 +415,8 @@ class BactopiaSchema {
             }
         } else if (params.workflow.name == "scrubber") {
             if (params.nohuman_db && !params.use_srascrubber) {
-                if (!params.download_nohuman) {
-                    if (isLocal(params.nohuman_db)) {
-                        if (params.nohuman_db.toString().endsWith(".tar.gz")) {
-                            error += fileNotFound(params.nohuman_db, "nohuman_db")
-                        } else {
-                            error += fileNotFound("${params.nohuman_db}/hash.k2d", "nohuman_db")
-                        }
-                    }
-                }
+                error += validateDbPath(params.nohuman_db, "nohuman_db", "hash.k2d",
+                                        skipDownload: params.download_nohuman, checkLocal: true)
             } else if (!params.nohuman_db && !params.use_srascrubber) {
                 log.error("Teton requires '--nohuman_db' or '--use_srascrubber' to be provided")
                 error += 1
@@ -455,6 +448,13 @@ class BactopiaSchema {
                 error += fileNotFound(params.tblastx_query, "tblastx_query")
             } else {
                 missing_required << "--tblastx_query"
+            }
+        } else if (params.workflow.name == "traitar") {
+            if (params.traitar_db) {
+                error += validateDbPath(params.traitar_db, "traitar_db", "Pfam-A.hmm",
+                                        skipDownload: params.download_traitar)
+            } else {
+                missing_required << "--traitar_db (and --download_traitar if you want it to be automatically downloaded)"
             }
         }
 
@@ -580,13 +580,8 @@ class BactopiaSchema {
         if (['bactopia', 'staphopia'].contains(params.workflow.name)) {
             if (params.use_bakta) {
                 if (params.bakta_db) {
-                    if (!params.download_bakta) {
-                        if (params.bakta_db.toString().endsWith(".tar.gz")) {
-                            error += fileNotFound(params.bakta_db, "bakta_db")
-                        } else {
-                            error += fileNotFound("${params.bakta_db}/bakta.db", "bakta_db")
-                        }
-                    }
+                    error += validateDbPath(params.bakta_db, "bakta_db", "bakta.db",
+                                            skipDownload: params.download_bakta)
                 } else {
                     log.error("Bactopia requires --bakta_db to be set when using --use_bakta")
                     error += 1
@@ -594,28 +589,16 @@ class BactopiaSchema {
             }
         } else if (params.workflow.name == "teton") {
             if (params.kraken2_db) {
-                if (isLocal(params.kraken2_db)) {
-                    if (params.kraken2_db.toString().endsWith(".tar.gz")) {
-                        error += fileNotFound(params.kraken2_db, "kraken2_db")
-                    } else {
-                        error += fileNotFound("${params.kraken2_db}/hash.k2d", "kraken2_db")
-                    }
-                }
+                error += validateDbPath(params.kraken2_db, "kraken2_db", "hash.k2d",
+                                        checkLocal: true)
             } else {
                 log.error("Teton requires '--kraken2_db' to be provided")
                 error += 1
             }
 
             if (params.nohuman_db && !params.use_srascrubber) {
-                if (!params.download_nohuman) {
-                    if (isLocal(params.nohuman_db)) {
-                        if (params.nohuman_db.toString().endsWith(".tar.gz")) {
-                            error += fileNotFound(params.nohuman_db, "nohuman_db")
-                        } else {
-                            error += fileNotFound("${params.nohuman_db}/hash.k2d", "nohuman_db")
-                        }
-                    }
-                }
+                error += validateDbPath(params.nohuman_db, "nohuman_db", "hash.k2d",
+                                        skipDownload: params.download_nohuman, checkLocal: true)
             } else if (!params.nohuman_db && !params.use_srascrubber) {
                 log.error("Teton requires '--nohuman_db' or '--use_srascrubber' to be provided")
                 error += 1

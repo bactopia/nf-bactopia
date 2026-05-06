@@ -49,6 +49,7 @@
         "olines",
         "pangenome",
         "Peachtree",
+        "Pfam",
         "phix",
         "pickleo",
         "Piiig",
@@ -70,7 +71,8 @@
         "Subworkflows",
         "tblastn",
         "tblastx",
-        "Thunderwear"
+        "Thunderwear",
+        "traitar"
     ],
     "java.configuration.updateBuildConfiguration": "interactive"
 }
