@@ -292,6 +292,36 @@ class BactopiaSchema {
     }
 
     /**
+     * Validate scrubber-related parameters for deacon, nohuman, or srascrubber.
+     *
+     * Priority: deacon_db/download_deacon > use_nohuman > use_srascrubber
+     *
+     * @param params       The workflow parameters
+     * @param workflowName The workflow name (for error messages)
+     * @return Integer error count
+     */
+    private static Integer validateScrubberParams(Map params, String workflowName) {
+        def Integer error = 0
+        if (params.deacon_db || params.download_deacon) {
+            if (!params.download_deacon) {
+                error += fileNotFound(params.deacon_db, "deacon_db")
+            }
+        } else if (params.use_nohuman) {
+            if (params.nohuman_db || params.download_nohuman) {
+                error += validateDbPath(params.nohuman_db, "nohuman_db", "hash.k2d",
+                                        skipDownload: params.download_nohuman, checkLocal: true)
+            } else {
+                log.error("'--use_nohuman' requires '--nohuman_db' or '--download_nohuman' to be provided")
+                error += 1
+            }
+        } else if (!params.use_srascrubber) {
+            log.error("${workflowName} requires '--deacon_db', '--use_nohuman', or '--use_srascrubber' to be provided")
+            error += 1
+        }
+        return error
+    }
+
+    /**
      * Validate Bactopia Tool parameters.
      *
      * @param params The workflow parameters
@@ -414,13 +444,7 @@ class BactopiaSchema {
                 missing_required << "--scoary_traits"
             }
         } else if (params.workflow.name == "scrubber") {
-            if (params.nohuman_db && !params.use_srascrubber) {
-                error += validateDbPath(params.nohuman_db, "nohuman_db", "hash.k2d",
-                                        skipDownload: params.download_nohuman, checkLocal: true)
-            } else if (!params.nohuman_db && !params.use_srascrubber) {
-                log.error("Teton requires '--nohuman_db' or '--use_srascrubber' to be provided")
-                error += 1
-            }
+            error += validateScrubberParams(params, "Scrubber")
         } else if (params.workflow.name == "snippy") {
             if (params.accession && params.reference) {
                 log.error("'--accession' and '--reference' cannot be used together")
@@ -596,13 +620,7 @@ class BactopiaSchema {
                 error += 1
             }
 
-            if (params.nohuman_db && !params.use_srascrubber) {
-                error += validateDbPath(params.nohuman_db, "nohuman_db", "hash.k2d",
-                                        skipDownload: params.download_nohuman, checkLocal: true)
-            } else if (!params.nohuman_db && !params.use_srascrubber) {
-                log.error("Teton requires '--nohuman_db' or '--use_srascrubber' to be provided")
-                error += 1
-            }
+            error += validateScrubberParams(params, "Teton")
         }
 
         if (error > 0) {

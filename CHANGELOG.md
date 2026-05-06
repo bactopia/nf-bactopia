@@ -1,5 +1,10 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.1.5
+
+- refactor scrubber input validation into `validateScrubberParams` helper to reduce duplication
+- add `--deacon_db` validation for the scrubber workflow
+
 ## v2.1.4
 
 - refactor database path validation into `validateDbPath` helper to reduce duplication

@@ -346,11 +346,59 @@ class BactopiaSchemaTest extends Specification {
         return params
     }
 
+    // -- deacon (first priority) --
+
+    def "validateBactopiaToolParams scrubber with cloud deacon_db succeeds"() {
+        given:
+        def params = baseToolParams(
+            deacon_db: 's3://bucket/deacon-db',
+            download_deacon: false,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaToolParams(params)
+
+        then:
+        result == "success"
+    }
+
+    def "validateBactopiaToolParams scrubber with download_deacon bypasses validation"() {
+        given:
+        def params = baseToolParams(
+            deacon_db: '/fake/nonexistent/path',
+            download_deacon: true,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaToolParams(params)
+
+        then:
+        result == "success"
+    }
+
+    def "validateBactopiaToolParams scrubber with local deacon_db validates file"() {
+        given:
+        GroovySpy(BactopiaUtils, global: true)
+        def params = baseToolParams(
+            deacon_db: '/path/to/deacon.db',
+            download_deacon: false,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaToolParams(params)
+
+        then:
+        1 * BactopiaUtils.fileExists('/path/to/deacon.db') >> true
+        result == "success"
+    }
+
+    // -- nohuman (second priority) --
+
     def "validateBactopiaToolParams scrubber with cloud nohuman_db succeeds"() {
         given:
         def params = baseToolParams(
+            use_nohuman: true,
             nohuman_db: 's3://bucket/nohuman-db',
-            use_srascrubber: false,
             download_nohuman: false,
         )
 
@@ -364,8 +412,8 @@ class BactopiaSchemaTest extends Specification {
     def "validateBactopiaToolParams scrubber with download_nohuman bypasses validation"() {
         given:
         def params = baseToolParams(
+            use_nohuman: true,
             nohuman_db: '/fake/nonexistent/path',
-            use_srascrubber: false,
             download_nohuman: true,
         )
 
@@ -376,25 +424,12 @@ class BactopiaSchemaTest extends Specification {
         result == "success"
     }
 
-    def "validateBactopiaToolParams scrubber with use_srascrubber bypasses nohuman_db"() {
+    def "validateBactopiaToolParams scrubber with use_nohuman but no db errors"() {
         given:
         def params = baseToolParams(
+            use_nohuman: true,
             nohuman_db: null,
-            use_srascrubber: true,
-        )
-
-        when:
-        def result = BactopiaSchema.validateBactopiaToolParams(params)
-
-        then:
-        result == "success"
-    }
-
-    def "validateBactopiaToolParams scrubber without nohuman_db or use_srascrubber errors"() {
-        given:
-        def params = baseToolParams(
-            nohuman_db: null,
-            use_srascrubber: false,
+            download_nohuman: false,
         )
 
         when:
@@ -408,8 +443,8 @@ class BactopiaSchemaTest extends Specification {
         given:
         GroovySpy(BactopiaUtils, global: true)
         def params = baseToolParams(
+            use_nohuman: true,
             nohuman_db: '/path/to/nohuman.tar.gz',
-            use_srascrubber: false,
             download_nohuman: false,
         )
 
@@ -426,8 +461,8 @@ class BactopiaSchemaTest extends Specification {
         given:
         GroovySpy(BactopiaUtils, global: true)
         def params = baseToolParams(
+            use_nohuman: true,
             nohuman_db: '/path/to/nohuman_dir',
-            use_srascrubber: false,
             download_nohuman: false,
         )
 
@@ -437,6 +472,36 @@ class BactopiaSchemaTest extends Specification {
         then:
         1 * BactopiaUtils.isLocal('/path/to/nohuman_dir') >> true
         1 * BactopiaUtils.fileNotFound('/path/to/nohuman_dir/hash.k2d', 'nohuman_db') >> 0
+        result == "success"
+    }
+
+    // -- srascrubber (third priority) --
+
+    def "validateBactopiaToolParams scrubber with use_srascrubber succeeds"() {
+        given:
+        def params = baseToolParams(
+            use_srascrubber: true,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaToolParams(params)
+
+        then:
+        result == "success"
+    }
+
+    // -- no scrubber configured --
+
+    def "validateBactopiaToolParams scrubber without any scrubber option errors"() {
+        given:
+        def params = baseToolParams(
+            use_srascrubber: false,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaToolParams(params)
+
+        then:
         result == "success"
     }
 
@@ -1116,14 +1181,15 @@ class BactopiaSchemaTest extends Specification {
         result == "is_accession"
     }
 
-    def "validateBactopiaParams teton with cloud kraken2_db and nohuman_db succeeds"() {
+    // -- teton: deacon (first priority) --
+
+    def "validateBactopiaParams teton with cloud deacon_db succeeds"() {
         given:
         def params = baseBactopiaParams(
             workflow: [name: 'teton'],
             kraken2_db: 's3://bucket/kraken2-db',
-            nohuman_db: 's3://bucket/nohuman-db',
-            use_srascrubber: false,
-            download_nohuman: false,
+            deacon_db: 's3://bucket/deacon-db',
+            download_deacon: false,
         )
 
         when:
@@ -1133,13 +1199,50 @@ class BactopiaSchemaTest extends Specification {
         result == "is_accession"
     }
 
-    def "validateBactopiaParams teton without kraken2_db errors"() {
+    def "validateBactopiaParams teton with download_deacon bypasses validation"() {
         given:
         def params = baseBactopiaParams(
             workflow: [name: 'teton'],
-            kraken2_db: null,
+            kraken2_db: 's3://bucket/kraken2-db',
+            deacon_db: '/fake/path',
+            download_deacon: true,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaParams(params)
+
+        then:
+        result == "is_accession"
+    }
+
+    def "validateBactopiaParams teton with local deacon_db validates file"() {
+        given:
+        GroovySpy(BactopiaUtils, global: true)
+        def params = baseBactopiaParams(
+            workflow: [name: 'teton'],
+            kraken2_db: 's3://bucket/kraken2-db',
+            deacon_db: '/path/to/deacon.db',
+            download_deacon: false,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaParams(params)
+
+        then:
+        1 * BactopiaUtils.fileExists('/path/to/deacon.db') >> true
+        result == "is_accession"
+    }
+
+    // -- teton: nohuman (second priority) --
+
+    def "validateBactopiaParams teton with cloud nohuman_db succeeds"() {
+        given:
+        def params = baseBactopiaParams(
+            workflow: [name: 'teton'],
+            kraken2_db: 's3://bucket/kraken2-db',
+            use_nohuman: true,
             nohuman_db: 's3://bucket/nohuman-db',
-            use_srascrubber: false,
+            download_nohuman: false,
         )
 
         when:
@@ -1154,8 +1257,8 @@ class BactopiaSchemaTest extends Specification {
         def params = baseBactopiaParams(
             workflow: [name: 'teton'],
             kraken2_db: 's3://bucket/kraken2-db',
+            use_nohuman: true,
             nohuman_db: '/fake/path',
-            use_srascrubber: false,
             download_nohuman: true,
         )
 
@@ -1166,46 +1269,13 @@ class BactopiaSchemaTest extends Specification {
         result == "is_accession"
     }
 
-    def "validateBactopiaParams teton with use_srascrubber bypasses nohuman_db"() {
+    def "validateBactopiaParams teton with use_nohuman but no db errors"() {
         given:
         def params = baseBactopiaParams(
             workflow: [name: 'teton'],
             kraken2_db: 's3://bucket/kraken2-db',
+            use_nohuman: true,
             nohuman_db: null,
-            use_srascrubber: true,
-        )
-
-        when:
-        def result = BactopiaSchema.validateBactopiaParams(params)
-
-        then:
-        result == "is_accession"
-    }
-
-    def "validateBactopiaParams teton without nohuman_db or use_srascrubber errors"() {
-        given:
-        def params = baseBactopiaParams(
-            workflow: [name: 'teton'],
-            kraken2_db: 's3://bucket/kraken2-db',
-            nohuman_db: null,
-            use_srascrubber: false,
-        )
-
-        when:
-        def result = BactopiaSchema.validateBactopiaParams(params)
-
-        then:
-        result == "is_accession"
-    }
-
-    def "validateBactopiaParams teton with local kraken2_db tar.gz validates file"() {
-        given:
-        GroovySpy(BactopiaUtils, global: true)
-        def params = baseBactopiaParams(
-            workflow: [name: 'teton'],
-            kraken2_db: '/path/to/kraken2.tar.gz',
-            nohuman_db: 's3://bucket/nohuman-db',
-            use_srascrubber: false,
             download_nohuman: false,
         )
 
@@ -1213,28 +1283,6 @@ class BactopiaSchemaTest extends Specification {
         def result = BactopiaSchema.validateBactopiaParams(params)
 
         then:
-        1 * BactopiaUtils.isLocal('/path/to/kraken2.tar.gz') >> true
-        1 * BactopiaUtils.fileNotFound('/path/to/kraken2.tar.gz', 'kraken2_db') >> 0
-        result == "is_accession"
-    }
-
-    def "validateBactopiaParams teton with local kraken2_db directory validates hash.k2d"() {
-        given:
-        GroovySpy(BactopiaUtils, global: true)
-        def params = baseBactopiaParams(
-            workflow: [name: 'teton'],
-            kraken2_db: '/path/to/kraken2_dir',
-            nohuman_db: 's3://bucket/nohuman-db',
-            use_srascrubber: false,
-            download_nohuman: false,
-        )
-
-        when:
-        def result = BactopiaSchema.validateBactopiaParams(params)
-
-        then:
-        1 * BactopiaUtils.isLocal('/path/to/kraken2_dir') >> true
-        1 * BactopiaUtils.fileNotFound('/path/to/kraken2_dir/hash.k2d', 'kraken2_db') >> 0
         result == "is_accession"
     }
 
@@ -1244,8 +1292,8 @@ class BactopiaSchemaTest extends Specification {
         def params = baseBactopiaParams(
             workflow: [name: 'teton'],
             kraken2_db: 's3://bucket/kraken2-db',
+            use_nohuman: true,
             nohuman_db: '/path/to/nohuman.tar.gz',
-            use_srascrubber: false,
             download_nohuman: false,
         )
 
@@ -1264,8 +1312,8 @@ class BactopiaSchemaTest extends Specification {
         def params = baseBactopiaParams(
             workflow: [name: 'teton'],
             kraken2_db: 's3://bucket/kraken2-db',
+            use_nohuman: true,
             nohuman_db: '/path/to/nohuman_dir',
-            use_srascrubber: false,
             download_nohuman: false,
         )
 
@@ -1275,6 +1323,95 @@ class BactopiaSchemaTest extends Specification {
         then:
         1 * BactopiaUtils.isLocal('/path/to/nohuman_dir') >> true
         1 * BactopiaUtils.fileNotFound('/path/to/nohuman_dir/hash.k2d', 'nohuman_db') >> 0
+        result == "is_accession"
+    }
+
+    // -- teton: srascrubber (third priority) --
+
+    def "validateBactopiaParams teton with use_srascrubber succeeds"() {
+        given:
+        def params = baseBactopiaParams(
+            workflow: [name: 'teton'],
+            kraken2_db: 's3://bucket/kraken2-db',
+            use_srascrubber: true,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaParams(params)
+
+        then:
+        result == "is_accession"
+    }
+
+    // -- teton: no scrubber configured --
+
+    def "validateBactopiaParams teton without any scrubber option errors"() {
+        given:
+        def params = baseBactopiaParams(
+            workflow: [name: 'teton'],
+            kraken2_db: 's3://bucket/kraken2-db',
+            use_srascrubber: false,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaParams(params)
+
+        then:
+        result == "is_accession"
+    }
+
+    // -- teton: missing kraken2_db --
+
+    def "validateBactopiaParams teton without kraken2_db errors"() {
+        given:
+        def params = baseBactopiaParams(
+            workflow: [name: 'teton'],
+            kraken2_db: null,
+            use_srascrubber: true,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaParams(params)
+
+        then:
+        result == "is_accession"
+    }
+
+    // -- teton: local kraken2_db validation --
+
+    def "validateBactopiaParams teton with local kraken2_db tar.gz validates file"() {
+        given:
+        GroovySpy(BactopiaUtils, global: true)
+        def params = baseBactopiaParams(
+            workflow: [name: 'teton'],
+            kraken2_db: '/path/to/kraken2.tar.gz',
+            use_srascrubber: true,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaParams(params)
+
+        then:
+        1 * BactopiaUtils.isLocal('/path/to/kraken2.tar.gz') >> true
+        1 * BactopiaUtils.fileNotFound('/path/to/kraken2.tar.gz', 'kraken2_db') >> 0
+        result == "is_accession"
+    }
+
+    def "validateBactopiaParams teton with local kraken2_db directory validates hash.k2d"() {
+        given:
+        GroovySpy(BactopiaUtils, global: true)
+        def params = baseBactopiaParams(
+            workflow: [name: 'teton'],
+            kraken2_db: '/path/to/kraken2_dir',
+            use_srascrubber: true,
+        )
+
+        when:
+        def result = BactopiaSchema.validateBactopiaParams(params)
+
+        then:
+        1 * BactopiaUtils.isLocal('/path/to/kraken2_dir') >> true
+        1 * BactopiaUtils.fileNotFound('/path/to/kraken2_dir/hash.k2d', 'kraken2_db') >> 0
         result == "is_accession"
     }
 }
