@@ -130,7 +130,7 @@ class BactopiaTools {
      */
     private static Boolean _missingRequiredFiles(List files) {
         for (file in files) {
-            if (isEmptyFile(file)) {
+            if (file == null || isEmptyFile(file)) {
                 return true
             }
         }
@@ -244,7 +244,7 @@ class BactopiaTools {
             def boolean readFound = false
 
             // Check for long reads (lr) (short_polish or ont)
-            if ('lr' in requestedReadKeys && fileExists(ontPath) && isOnt) {
+            if ('lr' in requestedReadKeys && inputs['lr'] && isOnt) {
                 inputs['meta'].single_end = true
                 inputs['meta'].runtype = 'ont'
                 required_files << inputs['lr']
@@ -252,7 +252,7 @@ class BactopiaTools {
             }
 
             // Check for SE illumina reads (single_end non-ONT)
-            if (!readFound && 'se' in requestedReadKeys && fileExists(sePath) && !isOnt) {
+            if (!readFound && 'se' in requestedReadKeys && inputs['se'] && !isOnt) {
                 inputs['meta'].single_end = true
                 inputs['meta'].runtype = 'illumina'
                 required_files << inputs['se']
@@ -260,8 +260,7 @@ class BactopiaTools {
             }
 
             // Check for PE illumina reads (hybrid or illumina_pe)
-            if (!readFound && 'r1' in requestedReadKeys && 'r2' in requestedReadKeys
-                    && fileExists(pe1Path) && fileExists(pe2Path) && !isOnt) {
+            if (!readFound && 'r1' in requestedReadKeys && 'r2' in requestedReadKeys && inputs['r1'] && inputs['r2'] && !isOnt) {
                 inputs['meta'].single_end = false
                 inputs['meta'].runtype = 'illumina'
                 required_files << inputs['r1']
@@ -269,9 +268,9 @@ class BactopiaTools {
                 readFound = true
             }
 
-            // No acceptable reads found -- force missing_required
+            // No acceptable reads found
             if (!readFound) {
-                inputs['missing_required'] = true
+                required_files << null
             }
         }
 

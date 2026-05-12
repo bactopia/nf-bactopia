@@ -1,5 +1,10 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.1.6
+
+- fix `missing_required` being overwritten to `false` when no reads are found for Bactopia Tool inputs
+- simplify read-check conditions to use already-resolved input values
+
 ## v2.1.5
 
 - refactor scrubber input validation into `validateScrubberParams` helper to reduce duplication

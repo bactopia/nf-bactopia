@@ -433,6 +433,18 @@ class BactopiaToolsTest extends Specification {
         !result.missing_required
     }
 
+    def '_collectInputs should set missing_required when no reads found'() {
+        given: 'no fastq files exist for the sample'
+        def qcDir = tempDir.resolve('sample1/main/qc')
+        Files.createDirectories(qcDir)
+
+        when: '_collectInputs is called with r1, r2, se'
+        def result = BactopiaTools._collectInputs('sample1', tempDir.toString(), ['r1', 'r2', 'se'])
+
+        then: 'missing_required should be true'
+        result.missing_required
+    }
+
     def 'processFOFN should parse include file'() {
         given: 'an include file'
         def includeFile = tempDir.resolve('include.txt').toFile()
