@@ -114,7 +114,15 @@ class BactopiaMotD {
             "What do you call a cow with no legs? ${colors.cyan}${colors.italic}Ground beef!${colors.reset}",
             "What bait does a librarian use to catch fish? ${colors.cyan}${colors.italic}Bookworms!${colors.reset}",
             "Why did the banana go to the doctor? ${colors.cyan}${colors.italic}Because it wasn't peeling well!${colors.reset}",
-            "How do planets entertain themselves? ${colors.cyan}${colors.italic}They read comet books!${colors.reset}"
+            "How do planets entertain themselves? ${colors.cyan}${colors.italic}They read comet books!${colors.reset}",
+            "What kind of people never get angry? ${colors.cyan}${colors.italic}Nomads!${colors.reset}",
+            "What do you call a boat with a hole at the bottom? ${colors.cyan}${colors.italic}A sink!${colors.reset}",
+            "What is a golf club's favorite type of music? ${colors.cyan}${colors.italic}Swing!${colors.reset}",
+            "What do you call a feud between celebrities? ${colors.cyan}${colors.italic}Star wars!${colors.reset}",
+            "What's a scarecrow's favorite fruit? ${colors.cyan}${colors.italic}Straw-berries!${colors.reset}",
+            "Why was the weeping willow so sad? ${colors.cyan}${colors.italic}It watched a sappy movie!${colors.reset}",
+            "What do sheep like to do during the summer? ${colors.cyan}${colors.italic}Have a baa-becue!${colors.reset}",
+            "What did the loaf say when it was finished baking? ${colors.cyan}${colors.italic}I'm bready!${colors.reset}"
         ]
         def random = new Random()
         def index = random.nextInt(messages.size())
