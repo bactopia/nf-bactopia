@@ -123,6 +123,23 @@ class BactopiaMotD {
             "Why was the weeping willow so sad? ${colors.cyan}${colors.italic}It watched a sappy movie!${colors.reset}",
             "What do sheep like to do during the summer? ${colors.cyan}${colors.italic}Have a baa-becue!${colors.reset}",
             "What did the loaf say when it was finished baking? ${colors.cyan}${colors.italic}I'm bready!${colors.reset}"
+            "What state does the most laundry? ${colors.cyan}${colors.italic}Washington!${colors.reset}",
+            "When does a farmer dance? ${colors.cyan}${colors.italic}When the beet drops!${colors.reset}",
+            "How can you tell if the ocean is friendly? ${colors.cyan}${colors.italic}It waves!${colors.reset}",
+            "What does a bird's ringtone sound like? ${colors.cyan}${colors.italic}Wing wing!${colors.reset}",
+            "What starts with E, ends with E, and has only 1 letter in it? ${colors.cyan}${colors.italic}An envelope!${colors.reset}",
+            "What do bread and butter do around the campfire? ${colors.cyan}${colors.italic}Tell scary toast stories!${colors.reset}",
+            "What is email's least favorite food? ${colors.cyan}${colors.italic}Spam!${colors.reset}",
+            "Why did the orange lose the race? ${colors.cyan}${colors.italic}It ran out of juice!${colors.reset}",
+            "Why did the ice cream become a reporter? ${colors.cyan}${colors.italic}It wanted to scoop the news!${colors.reset}",
+            "Where do Volkswagen cars go when they get old? ${colors.cyan}${colors.italic}The old Volks-home!${colors.reset}",
+            "Why was the broom late for the meeting? ${colors.cyan}${colors.italic}It over swept!${colors.reset}",
+            "What do all ninjas wear to work? ${colors.cyan}${colors.italic}Sneakers!${colors.reset}",
+            "What's scaly, big, and can eat more knights than a dragon? ${colors.cyan}${colors.italic}Two dragons!${colors.reset}",
+            "Why did the student steal a chair?" + "${colors.cyan}${colors.italic}Because they were told to take a seat!${colors.reset}",
+            "What did the loaf say when it was finished baking? ${colors.cyan}${colors.italic}I'm bready!${colors.reset}",
+            "What do sheep like to do during the summer? ${colors.cyan}${colors.italic}Have a baa-becue!${colors.reset}",
+            "What's the best way to catch a fish? ${colors.cyan}${colors.italic}Have someone throw it to you!${colors.reset}"
         ]
         def random = new Random()
         def index = random.nextInt(messages.size())
