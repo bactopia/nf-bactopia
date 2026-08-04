@@ -122,7 +122,7 @@ class BactopiaMotD {
             "What's a scarecrow's favorite fruit? ${colors.cyan}${colors.italic}Straw-berries!${colors.reset}",
             "Why was the weeping willow so sad? ${colors.cyan}${colors.italic}It watched a sappy movie!${colors.reset}",
             "What do sheep like to do during the summer? ${colors.cyan}${colors.italic}Have a baa-becue!${colors.reset}",
-            "What did the loaf say when it was finished baking? ${colors.cyan}${colors.italic}I'm bready!${colors.reset}"
+            "What did the loaf say when it was finished baking? ${colors.cyan}${colors.italic}I'm bready!${colors.reset}",
             "What state does the most laundry? ${colors.cyan}${colors.italic}Washington!${colors.reset}",
             "When does a farmer dance? ${colors.cyan}${colors.italic}When the beet drops!${colors.reset}",
             "How can you tell if the ocean is friendly? ${colors.cyan}${colors.italic}It waves!${colors.reset}",

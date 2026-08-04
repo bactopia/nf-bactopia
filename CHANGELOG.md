@@ -1,5 +1,8 @@
 # bactopia/nf-bactopia: Changelog
 
+## v2.1.7
+- add more messages of the day
+
 ## v2.1.6
 
 - fix `missing_required` being overwritten to `false` when no reads are found for Bactopia Tool inputs
