@@ -1,389 +1,167 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for AI coding agents working in this repository.
 
 ## Project Overview
 
-This is the nf-bactopia Nextflow plugin, which provides utility functions used by Bactopia pipelines. The plugin
-extends Nextflow with custom functions for input handling, parameter validation, channel manipulation, and sample
-data transformation.
+nf-bactopia is a Nextflow plugin providing utility functions for Bactopia pipelines. It extends
+Nextflow with custom functions for input handling, parameter validation, channel manipulation, and
+sample data transformation. It is designed specifically for Bactopia and will not work with other
+pipelines.
+
+- Plugin version: `2.1.7` (in `build.gradle`)
+- Nextflow plugin SDK: `io.nextflow.nextflow-plugin` `1.0.0-beta.15`
+- Nextflow compatibility: `26.04.0`
+- Runtime deps: `org.json:json` (JSON), `dev.harrel:json-schema` (schema validation),
+  `com.sanctionco.jmail` (email validation)
 
 ## Development Commands
 
-### Building and Testing
-
 ```bash
-# Build the plugin
-make assemble
-# or
-./gradlew assemble
+make assemble    # build the plugin          (./gradlew assemble)
+make test        # run Spock unit tests      (./gradlew test)
+make clean       # clean build artifacts     (./gradlew clean + rm -rf .nextflow* work build)
+make install     # install plugin locally    (./gradlew install, clears cached plugin first)
+make release     # publish the plugin        (./gradlew releasePlugin)
 
-# Run unit tests
-make test
-# or
-./gradlew test
-
-# Clean build artifacts
-make clean
-# or
-./gradlew clean
-
-# Install plugin locally for testing
-make install
-# or
-./gradlew install
-
-# Test with Nextflow
-nextflow run test-gather.nf
-nextflow run test-flatten.nf
-nextflow run test-format.nf
+./gradlew test jacocoTestReport   # tests + coverage report (build/reports/jacoco/test/html/)
 ```
 
-### Release and Publishing
+`make test` automatically produces a JaCoCo report (`test.finalizedBy jacocoTestReport`). A 60%
+instruction-coverage rule exists in `build.gradle` (`jacocoTestCoverageVerification`) but is not
+wired into `check` — uncomment `check.dependsOn jacocoTestCoverageVerification` to enforce it.
 
-```bash
-# Publish the plugin
-make release
-# or
-./gradlew releasePlugin
-```
+## Architecture
 
-## Architecture Overview
+Extension points declared in `build.gradle` (`nextflowPlugin.extensionPoints`):
 
-### Plugin Structure
+- **BactopiaPlugin** — plugin entry point extending `BasePlugin`
+- **BactopiaExtension** — thin `@Function` wrappers only; all logic lives in utility classes
+- **BactopiaConfig** — configuration management
+- **BactopiaFactory** — `TraceObserverFactoryV2` that creates the `BactopiaObserver`
+  (workflow execution observer) with a `BactopiaConfig` per session
 
-The plugin follows Nextflow's PF4J-based plugin architecture:
+### Source layout (`src/main/groovy/bactopia/plugin/`)
 
-- **BactopiaPlugin.groovy**: Main plugin entry point extending BasePlugin
-- **BactopiaExtension.groovy**: Primary extension point providing @Function-annotated methods
-- **BactopiaFactory.groovy**: Factory class for creating plugin instances
-- **BactopiaObserver.groovy**: Observer for monitoring workflow execution
+| Path | Contents |
+|---|---|
+| root | `BactopiaConfig`, `BactopiaSchema`, `BactopiaUtils`, `BactopiaTemplate`, `BactopiaLoggerFactory`, `BactopiaMotD` |
+| `inputs/` | `Bactopia` (main workflow inputs), `BactopiaTools` (Bactopia Tool inputs) |
+| `utils/` | `ChannelUtils` (channel ops), `SampleUtils` (sample tuple formatting), `EmptyFiles` (placeholder-file detection) |
+| `nfschema/` | Vendored nf-schema code: `JsonSchemaValidator`, `HelpMessageCreator`, `SummaryCreator`, `Common`, `Files`, `Types`, `SchemaValidationException` — excluded from coverage |
 
-### Core Utility Classes
+### Exported functions (`BactopiaExtension`, 12 total)
 
-Located in `src/main/groovy/bactopia/plugin/`:
+Importable in Nextflow scripts via `include { ... } from 'plugin/nf-bactopia'`:
 
-#### Main Utilities
-- **BactopiaConfig**: Configuration management and settings
-- **BactopiaSchema**: Schema validation using nf-schema patterns
-- **BactopiaUtils**: General utility functions (file validation, conditional checks, etc.)
-- **BactopiaTemplate**: Template rendering for help messages and summaries
-- **BactopiaLogger/BactopiaLoggerFactory**: Centralized logging system with capture capabilities
-- **BactopiaMotD**: Message of the Day functionality
+| Function | Purpose |
+|---|---|
+| `bactopiaInputs(String runType)` | Collect/validate Bactopia workflow inputs |
+| `bactopiaToolInputs()` | Collect/validate Bactopia Tool inputs |
+| `validateParameters(Boolean isBactopiaTool)` | Schema-based parameter validation |
+| `getCapturedLogs(Boolean withColors = true)` | Retrieve captured plugin logs |
+| `clearCapturedLogs()` | Clear captured logs |
+| `gather(chResults, field, meta)` | Collect one record field into a single tuple |
+| `gatherCsvtk(chResults, field, meta)` | `gather` variant producing CSVTK_CONCAT-ready input |
+| `gatherFields(chResults, fieldMapping, meta)` | Gather multiple fields with rename mapping |
+| `formatSamples(samples, dataTypes)` | Adapt sample tuple size to data availability |
+| `filterWithData(input, fields)` | Keep records where at least one field has data |
+| `collectNextflowLogs(chResults)` | Expand each record's `nf_logs` field into `[meta, file]` tuples |
+| `combineWith(gathered, items, field)` | Cartesian product of gathered results with items |
 
-#### Input Handling (inputs/)
-- **Bactopia**: Collect and validate main Bactopia workflow inputs
-- **BactopiaTools**: Collect and validate Bactopia Tool inputs
-- Supporting classes: Assembly, Nanopore, Ontology, SRA, Accessions, Generic, Merlin, Search
-
-#### Channel & Sample Utilities (utils/)
-- **ChannelUtils**: Channel manipulation operations
-  - `gather()`: Collect record field outputs into a single tuple
-  - `flattenPaths()`: Mix channels and flatten file sets
-- **SampleUtils**: Sample data transformation operations
-  - `formatSamples()`: Adapt tuple sizes based on data availability
-
-#### Schema Validation (nfschema/)
-- **HelpMessageCreator**: Generate help messages from schema
-- **SummaryCreator**: Create parameter summaries
-- **Common**: Shared utilities for schema operations
-
-### Extension Points
-
-The plugin provides several @Function-annotated methods accessible in Nextflow scripts:
-
-1. **Input Collection**: `bactopiaInputs()`, `bactopiaToolInputs()`
-2. **Validation**: `validateParameters()`
-3. **Logging**: `getCapturedLogs()`, `clearCapturedLogs()`
-4. **Channel Operations**: `gather()`, `flattenPaths()`
-5. **Sample Formatting**: `formatSamples()`
-
-## Key Configuration Files
-
-### build.gradle
-
-- Uses `io.nextflow.nextflow-plugin` version `1.0.0-beta.12`
-- Plugin version: `1.0.9`
-- Nextflow compatibility: `25.10.0`
-- Extension points: `BactopiaConfig`, `BactopiaExtension`, `BactopiaFactory`
-- Dependencies:
-  - org.json:json for JSON processing
-  - dev.harrel:json-schema for schema validation
-  - com.sanctionco.jmail for email validation
-
-### Makefile
-
-Provides convenient commands wrapping Gradle tasks for common development workflows.
-
-## Plugin Usage Patterns
-
-### Import Pattern in Nextflow Scripts
-
-```nextflow
-include { bactopiaInputs     } from 'plugin/nf-bactopia'
-include { bactopiaToolInputs } from 'plugin/nf-bactopia'
-include { validateParameters } from 'plugin/nf-bactopia'
-include { gather             } from 'plugin/nf-bactopia'
-include { flattenPaths       } from 'plugin/nf-bactopia'
-include { formatSamples      } from 'plugin/nf-bactopia'
-```
-
-### Typical Integration Points
-
-1. **Pipeline initialization**: Input collection and validation
-2. **Parameter validation**: Schema-based parameter checking
-3. **Channel manipulation**: Gathering and flattening outputs
-4. **Sample formatting**: Adapting tuple sizes for different data types
-
-## Channel Manipulation Functions
-
-### Key Pattern: nf-core Approach
-
-All channel functions follow the **nf-core pattern**:
-- Accept `Object` parameter (can be channel or list)
-- Use `instanceof DataflowReadChannel/DataflowWriteChannel` to detect input type
-- Apply built-in Nextflow operators when working with channels
-- Process directly when working with lists
-- Return appropriate type based on input
-
-### Example: gather()
+### Usage examples
 
 ```groovy
-// Replaces this pattern:
-SCCMEC.out.tsv.collect{_meta, tsv -> tsv}.map{ tsv -> [[id:'sccmec'], tsv]}
-
-// With this:
+// Replaces: SCCMEC.out.tsv.collect{ _meta, tsv -> tsv }.map{ tsv -> [[id:'sccmec'], tsv] }
 gather(SCCMEC.out, 'tsv', [name: 'sccmec'])
 
-// With extra meta keys:
-gather(ARIBA_RUN.out, 'report', [name: "${db}-report", args: '-C "$" --lazy-quotes'])
-gather(MODULE.out, 'masked_aln', [name: 'core-genome.masked.distance', process_name: 'snpdists-masked'])
+gatherCsvtk(ARIBA_RUN.out, 'report', [name: 'ariba-report', args: '-C "$" --lazy-quotes'])
+gatherFields(MODULE.out, [gff: 'gff', tsv: 'tsv'], [name: 'prokka'])
+
+filterWithData(MODULE.out, ['tsv', 'gff'])
+combineWith(gathered_ch, references_ch, 'reference')
+
+formatSamples(samples, 1)  // [meta, inputs]
+formatSamples(samples, 2)  // [meta, inputs, extra]
+formatSamples(samples, 3)  // [meta, inputs, extra, extra2]
 ```
 
-### Example: flattenPaths()
+## Critical Implementation Rules
 
-```groovy
-// Mix multiple channels and flatten file sets
-// Transforms Tuple<Map, Set<Path>> to Tuple<Map, Path>
-flattenPaths([ch1, ch2, ch3])
-```
+### Use `@Function`, never custom `@Operator`
 
-### Example: formatSamples()
+Custom `@Operator` annotations return `OpCall` wrappers instead of channels, cause
+"Missing operator source channel" errors, and may be deprecated by the Nextflow team. Write
+`@Function` methods that apply **built-in** operators instead.
 
-```groovy
-// Adapt 4-element tuples based on data availability
-formatSamples(samples, 1)  // Returns [meta, inputs]
-formatSamples(samples, 2)  // Returns [meta, inputs, extra]
-formatSamples(samples, 3)  // Returns [meta, inputs, extra, extra2]
-```
+### No `@CompileStatic` on channel utilities
 
-## Important Implementation Notes
+Groovy static type checking is too strict for dynamic channel operations — `.map()`,
+`.collect()`, `.flatMap()` on channels won't compile. Leave utility classes unannotated.
 
-### DO NOT Use Custom @Operator Annotations
+### nf-core input-detection pattern
 
-**Critical**: Custom operators with `@Operator` annotation are problematic:
-- They return `OpCall` objects instead of proper channels
-- Cause "Missing operator source channel" errors
-- May be deprecated by Nextflow team
-- **Use @Function with built-in operators instead**
-
-### Preferred Pattern for Channel Operations
-
-✅ **CORRECT**: Functions that apply built-in operators
+All channel functions accept `Object` and branch on type:
 
 ```groovy
 @Function
 Object myFunction(Object input) {
-    if (input instanceof DataflowReadChannel) {
-        return input.map { ... }.collect { ... }  // Use built-in operators
+    if (input instanceof DataflowReadChannel || input instanceof DataflowWriteChannel) {
+        return input.map { ... }.collect { ... }  // built-in operators on channels
     }
-    return input.collect { ... }  // Process lists directly
+    return input.collect { ... }                   // process lists directly
 }
 ```
 
-❌ **INCORRECT**: Custom operators
+### Thin extension, fat utilities
+
+`BactopiaExtension.groovy` contains only delegating wrappers with JavaDoc; implementation lives in
+`utils/`, `inputs/`, etc. This keeps utilities unit-testable outside a Nextflow session.
 
 ```groovy
-@Operator
-def myOperator() {
-    // Don't do this - returns OpCall wrapper
-}
-```
-
-### Static Type Checking
-
-**Do not** use `@CompileStatic` on utility classes that work with channels:
-- Groovy's static type checking is too strict for dynamic channel operations
-- Channel methods like `.map()`, `.collect()`, `.flatMap()` won't compile
-- Leave utility classes without `@CompileStatic` annotation
-
-## Code Organization Philosophy
-
-### Thin Wrappers in Extension
-
-`BactopiaExtension.groovy` contains only thin @Function wrappers:
-
-```groovy
+/**
+ * Brief description.
+ *
+ * @param paramName description
+ * @return description
+ */
 @Function
 Object gather(Object chResults, String field, Map meta) {
     return ChannelUtils.gather(chResults, field, meta)
 }
 ```
 
-### Logic in Utility Classes
+### Logging
 
-Actual implementation lives in utility classes (`utils/` directory):
+All validation/diagnostic output goes through `BactopiaLoggerFactory` so it can be captured and
+returned to the workflow (`getCapturedLogs`/`clearCapturedLogs`) for proper error handling. Never
+print directly.
 
-```groovy
-class ChannelUtils {
-    static Object gather(Object chResults, String field, Map meta) {
-        // Full implementation here
-    }
-}
-```
+## Testing
 
-### Benefits
+- **Unit tests**: Spock specifications in `src/test/groovy/bactopia/plugin/` (mirrors the main
+  source tree: root classes plus `inputs/`, `utils/`, `nfschema/`). Channel-based code paths are
+  integration-tested in a full Nextflow context; unit tests focus on list-based operations.
+- **Workflow tests**: `nf-bactopia-test/` contains a runnable test workflow (`main.nf`,
+  `nextflow.config`, `nextflow_schema.json`, modules/subworkflows/conf).
 
-- **Better organization**: Functions grouped by purpose
-- **Easier testing**: Unit test utility classes independently
-- **Reusability**: Utility classes can be used internally
-- **Clear separation**: Extension handles plugin interface, utilities handle logic
-- **Scalability**: Easy to add new utility classes as needed
+To test changes end to end:
 
-## Logging System
+1. `make install` (clears `~/.nextflow/plugins/nf-bactopia-<version>` and installs locally)
+2. Run the test workflow or a minimal `.nf` script exercising the changed function
+3. If the plugin cache is stale: `rm -rf ~/.nextflow/plugins/nf-bactopia-*`
 
-### Centralized Logging
+## Adding New Functions
 
-The plugin uses `BactopiaLoggerFactory` for centralized log capture:
+1. Implement as a static method in the appropriate utility class (`ChannelUtils`, `SampleUtils`,
+   or a new class in `utils/`)
+2. Follow the nf-core input-detection pattern; validate null/empty arguments with
+   `IllegalArgumentException`
+3. Add a thin JavaDoc'd `@Function` wrapper in `BactopiaExtension.groovy`
+4. Add Spock tests under `src/test/groovy/bactopia/plugin/`
+5. Document the function in the table above
 
-```groovy
-// Logs are automatically captured from anywhere in the plugin
-BactopiaLogger.error("Error message")
+## Versioning and Release
 
-// Retrieve captured logs
-def logs = BactopiaLoggerFactory.captureAndClearLogs()
-// Returns: [hasErrors: boolean, error: string, logs: string]
-```
-
-### Usage Pattern
-
-All input validation and schema validation logs are captured and returned to the workflow for proper error handling.
-
-## Testing Strategy
-
-### Test Files
-
-- `test-gather.nf`: Tests gather() function
-- `test-flatten.nf`: Tests flattenPaths() function
-- `test-format.nf`: Tests formatSamples() function
-- `nf-bactopia-test/`: Full workflow test directory
-
-### Testing New Functions
-
-1. Create a test `.nf` file in project root
-2. Run `./gradlew install` to install plugin locally
-3. Execute test with `nextflow run test-file.nf`
-4. Check output and behavior
-
-## Development Best Practices
-
-### Adding New Channel Functions
-
-1. Implement in appropriate utility class (`ChannelUtils`, `SampleUtils`, etc.)
-2. Use the nf-core pattern (instanceof checks, built-in operators)
-3. Add thin wrapper in `BactopiaExtension.groovy` with `@Function`
-4. Create test file to verify functionality
-5. Document in this file
-
-### Adding New Utility Classes
-
-When adding functionality that doesn't fit existing utilities:
-
-1. Create new class in `src/main/groovy/bactopia/plugin/utils/`
-2. Use static methods for stateless operations
-3. Import in `BactopiaExtension.groovy`
-4. Add wrapper functions as needed
-
-### Plugin Versioning
-
-- Update version in `build.gradle`
-- Run `./gradlew install` to install locally
-- Test thoroughly before releasing
-- Clear plugin cache if needed: `rm -rf ~/.nextflow/plugins/nf-bactopia-*`
-
-## Documentation
-
-### Key Files
-
-- **README.md**: General project overview
-- **CHANGELOG.md**: Version history and changes
-- **docs/plugin-utils-organization.md**: Details on utility organization
-
-### JavaDoc Style
-
-Use JavaDoc comments for all @Function methods:
-
-```groovy
-/**
- * Brief description of function.
- *
- * @param paramName Description of parameter
- * @return Description of return value
- */
-@Function
-Object functionName(Object paramName) {
-    return UtilityClass.functionName(paramName)
-}
-```
-
-## Common Patterns
-
-### Input Validation Pattern
-
-```groovy
-@Function
-Map validateAndCollectInputs(String type) {
-    def samples = collectInputs(params, type)
-    def logs = BactopiaLoggerFactory.captureAndClearLogs()
-    return [
-        hasErrors: logs.hasErrors,
-        error: logs.error,
-        logs: logs.logs,
-        samples: samples
-    ]
-}
-```
-
-### Channel Transformation Pattern
-
-```groovy
-static Object transform(Object input) {
-    if (input instanceof DataflowReadChannel || input instanceof DataflowWriteChannel) {
-        return input.map { ... }.collect { ... }
-    } else {
-        return input.collect { ... }
-    }
-}
-```
-
-## References and Inspiration
-
-- **nf-core plugin**: Pattern for channel functions that detect input type
-- **Nextflow documentation**: Official plugin development guide
-- **Community feedback**: Nextflow team confirmed @Operator issues, recommended @Function approach
-
-## Future Considerations
-
-### Potential New Utilities
-
-- Report generation and aggregation functions
-- Additional sample transformation functions
-- Metadata manipulation helpers
-- File validation utilities
-
-### Architectural Notes
-
-- Keep extension thin, logic in utilities
-- Group related functions in utility classes
-- Maintain compatibility with Nextflow built-in operators
-- Follow nf-core patterns for consistency
+- Bump `version` in `build.gradle`, add a `CHANGELOG.md` entry
+- `make release` publishes via `./gradlew releasePlugin`
