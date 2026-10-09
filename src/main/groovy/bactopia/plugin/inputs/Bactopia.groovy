@@ -1,6 +1,7 @@
 package bactopia.plugin.inputs
 
 import groovy.util.logging.Slf4j
+import nextflow.Nextflow
 import nextflow.util.RecordMap
 
 @Slf4j
@@ -110,7 +111,7 @@ class Bactopia {
         def hasValidHeaders = true
 
         // Read the samples file (TSV format)
-        new File(params.samples).splitEachLine('\t') { columns ->
+        Nextflow.file(params.samples).splitEachLine('\t') { columns ->
             // Strip whitespace from each column
             columns = columns.collect { it.trim() }
 
@@ -283,7 +284,7 @@ class Bactopia {
         def hasValidHeaders = true
 
         // Read the accessions file (TSV format)
-        new File(params.accessions).splitEachLine('\t') { columns ->
+        Nextflow.file(params.accessions).splitEachLine('\t') { columns ->
             // Strip whitespace from each column
             columns = columns.collect { it.trim() }
 
