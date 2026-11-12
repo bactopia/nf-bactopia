@@ -4,6 +4,7 @@
 
 - add `filterWithRequiredAndOneOf(input, required, oneOf)` to keep records where every `required` field has data and at least one `oneOf` field has data, projecting survivors to `meta` + the named fields
 - treat a 0-byte file, blank string, and empty collection/map as "no data" in `filterWithRequiredAndOneOf` (`filterWithData` keeps its non-null semantics)
+- use `Nextflow.file()` to resolve input paths
 
 ## v2.1.7
 - add more messages of the day
