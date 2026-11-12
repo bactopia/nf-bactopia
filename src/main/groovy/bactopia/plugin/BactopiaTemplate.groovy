@@ -100,13 +100,13 @@ class BactopiaTemplate {
      *
      * @param workflow The workflow metadata
      * @param monochrome_logs Whether to use monochrome logs
-     * @param worflow_name The workflow name
-     * @param worflow_description The workflow description
+     * @param workflow_name The workflow name
+     * @param workflow_description The workflow description
      * @return String containing the formatted logo
      */
-    public static String getLogo(workflow, monochrome_logs, worflow_name, worflow_description) {
+    public static String getLogo(workflow, monochrome_logs, workflow_name, workflow_description) {
         Map colors = this.getLogColors(monochrome_logs)
-        if (worflow_name == "bactopia") {
+        if (workflow_name == "bactopia") {
             String.format(
                 """
                 -${colors.dim}-------------------------------------------${colors.reset}-
@@ -117,11 +117,11 @@ class BactopiaTemplate {
                 ${colors.blue}  |_.__/ \\__,_|\\___|\\__\\___/| .__/|_|\\__,_| ${colors.reset}
                 ${colors.blue}                            |_|                  ${colors.reset}
                 ${colors.cyan}  ${workflow.manifest.name} v${workflow.manifest.version}${colors.reset}
-                ${colors.cyan}  ${worflow_description} ${colors.reset}
+                ${colors.cyan}  ${workflow_description} ${colors.reset}
                 -${colors.dim}-------------------------------------------${colors.reset}-
                 """.stripIndent()
             )
-        } else if (worflow_name == "staphopia") {
+        } else if (workflow_name == "staphopia") {
             String.format(
                 """
                 -${colors.dim}------------------------------------------------${colors.reset}-
@@ -132,11 +132,11 @@ class BactopiaTemplate {
                 ${colors.blue}  |___/\\__\\__,_| .__/|_| |_|\\___/| .__/|_|\\__,_| ${colors.reset}
                 ${colors.blue}               |_|               |_|                 ${colors.reset}
                 ${colors.cyan}  staphopia v${workflow.manifest.version}${colors.reset}
-                ${colors.cyan}  ${worflow_description} ${colors.reset}
+                ${colors.cyan}  ${workflow_description} ${colors.reset}
                 -${colors.dim}------------------------------------------------${colors.reset}-
                 """.stripIndent()
             )
-        } else if (worflow_name == "enteropia") {
+        } else if (workflow_name == "enteropia") {
             String.format(
                 """
                 -${colors.dim}---------------------------------------------------------------------------------------${colors.reset}-
@@ -147,11 +147,11 @@ class BactopiaTemplate {
                 ${colors.blue}   \\___|_| |_|\\__\\___|_|  \\___/| .__/|_|\\__,_| ${colors.reset}
                 ${colors.blue}                               |_|                  ${colors.reset}
                 ${colors.cyan}  enteropia v${workflow.manifest.version}${colors.reset}
-                ${colors.cyan}  ${worflow_description} ${colors.reset}
+                ${colors.cyan}  ${workflow_description} ${colors.reset}
                 -${colors.dim}---------------------------------------------------------------------------------------${colors.reset}-
                 """.stripIndent()
             )
-        } else if (worflow_name == "cleanyerreads") {
+        } else if (workflow_name == "cleanyerreads") {
             String.format(
                 """
                 -${colors.dim}------------------------------------------------------------------------${colors.reset}-
@@ -179,11 +179,11 @@ class BactopiaTemplate {
                 ${colors.blue}                      ⠀⠀⠳⢤⠼⠃⠀⠀⠀⠀⠀⠀⠈⠉⠉⠉⠉⠁⠀⠀⠀⠀⠀⠀⠘⠷⢤⠾⠁⠀         ${colors.reset}
                 ${colors.blue} ${colors.reset}
                 ${colors.cyan} clean-yer-reads v${workflow.manifest.version}${colors.reset}
-                ${colors.cyan} ${worflow_description} ${colors.reset}
+                ${colors.cyan} ${workflow_description} ${colors.reset}
                 -${colors.dim}------------------------------------------------------------------------${colors.reset}-
                 """.stripIndent()
             )
-        } else if (worflow_name == "teton") {
+        } else if (workflow_name == "teton") {
             String.format(
                 """
                 -${colors.dim}------------------------------------------------------------------${colors.reset}-
@@ -195,7 +195,7 @@ class BactopiaTemplate {
                 ${colors.blue}                                      Art by Joan Stark         ${colors.reset}
                 ${colors.blue}  ${colors.reset}
                 ${colors.cyan}  teton v${workflow.manifest.version}${colors.reset}
-                ${colors.cyan}  ${worflow_description}${colors.reset}
+                ${colors.cyan}  ${workflow_description}${colors.reset}
                 -${colors.dim}------------------------------------------------------------------${colors.reset}-
                 """.stripIndent()
             )
@@ -208,8 +208,8 @@ class BactopiaTemplate {
                 ${colors.blue}  | |_) | (_| | (__| || (_) | |_) | | (_| | | || (_) | (_) | \\__ \\        ${colors.reset}
                 ${colors.blue}  |_.__/ \\__,_|\\___|\\__\\___/| .__/|_|\\__,_|  \\__\\___/ \\___/|_|___/ ${colors.reset}
                 ${colors.blue}                            |_|                                            ${colors.reset}
-                ${colors.cyan}  bactopia tools ${worflow_name} v${workflow.manifest.version}${colors.reset}
-                ${colors.cyan}  ${worflow_description} ${colors.reset}
+                ${colors.cyan}  bactopia tools ${workflow_name} v${workflow.manifest.version}${colors.reset}
+                ${colors.cyan}  ${workflow_description} ${colors.reset}
                 -${colors.dim}------------------------------------------------------------------${colors.reset}-
                 """.stripIndent()
             )

@@ -177,7 +177,7 @@ public class Files {
     private static Map paramsRead(Path json_schema) throws Exception {
         def slurper = new JsonSlurper()
         def Map schema = (Map) slurper.parse( json_schema )
-        // $defs is the adviced keyword for definitions. Keeping defs in for backwards compatibility
+        // $defs is the advised keyword for definitions. Keeping defs in for backwards compatibility
         def Map schema_defs = (Map) (schema.get('$defs') ?: schema.get("defs"))
         def Map schema_properties = (Map) schema.get('properties')
         /* Tree looks like this in nf-core schema

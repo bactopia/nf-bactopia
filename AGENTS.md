@@ -9,8 +9,8 @@ Nextflow with custom functions for input handling, parameter validation, channel
 sample data transformation. It is designed specifically for Bactopia and will not work with other
 pipelines.
 
-- Plugin version: `2.1.7` (in `build.gradle`)
-- Nextflow plugin SDK: `io.nextflow.nextflow-plugin` `1.0.0-beta.15`
+- Plugin version: `2.2.0` (in `build.gradle`)
+- Nextflow plugin SDK: `io.nextflow.nextflow-plugin` `1.0.0-beta.16`
 - Nextflow compatibility: `26.04.0`
 - Runtime deps: `org.json:json` (JSON), `dev.harrel:json-schema` (schema validation),
   `com.sanctionco.jmail` (email validation)
@@ -50,7 +50,7 @@ Extension points declared in `build.gradle` (`nextflowPlugin.extensionPoints`):
 | `utils/` | `ChannelUtils` (channel ops), `SampleUtils` (sample tuple formatting), `EmptyFiles` (placeholder-file detection) |
 | `nfschema/` | Vendored nf-schema code: `JsonSchemaValidator`, `HelpMessageCreator`, `SummaryCreator`, `Common`, `Files`, `Types`, `SchemaValidationException` — excluded from coverage |
 
-### Exported functions (`BactopiaExtension`, 12 total)
+### Exported functions (`BactopiaExtension`, 13 total)
 
 Importable in Nextflow scripts via `include { ... } from 'plugin/nf-bactopia'`:
 
@@ -66,6 +66,7 @@ Importable in Nextflow scripts via `include { ... } from 'plugin/nf-bactopia'`:
 | `gatherFields(chResults, fieldMapping, meta)` | Gather multiple fields with rename mapping |
 | `formatSamples(samples, dataTypes)` | Adapt sample tuple size to data availability |
 | `filterWithData(input, fields)` | Keep records where at least one field has data |
+| `filterWithRequiredAndOneOf(input, required, oneOf)` | Keep records where all `required` fields have data and at least one `oneOf` field has data |
 | `collectNextflowLogs(chResults)` | Expand each record's `nf_logs` field into `[meta, file]` tuples |
 | `combineWith(gathered, items, field)` | Cartesian product of gathered results with items |
 
@@ -79,6 +80,7 @@ gatherCsvtk(ARIBA_RUN.out, 'report', [name: 'ariba-report', args: '-C "$" --lazy
 gatherFields(MODULE.out, [gff: 'gff', tsv: 'tsv'], [name: 'prokka'])
 
 filterWithData(MODULE.out, ['tsv', 'gff'])
+filterWithRequiredAndOneOf(MODULE.out, ['fna'], ['r1', 'r2', 'se', 'lr'])
 combineWith(gathered_ch, references_ch, 'reference')
 
 formatSamples(samples, 1)  // [meta, inputs]

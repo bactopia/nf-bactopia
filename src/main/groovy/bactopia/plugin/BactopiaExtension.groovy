@@ -218,6 +218,23 @@ class BactopiaExtension extends PluginExtensionPoint {
     }
 
     /**
+     * Filter records that satisfy a data requirement: every field in `required` must have data
+     * and, when `oneOf` is non-empty, at least one field in `oneOf` must have data.
+     * Fields named in either list are carried through; all other fields are dropped.
+     * Unlike `filterWithData`, a 0-byte file, a blank string, and an empty collection or map
+     * all count as no data.
+     *
+     * @param input    Channel or List of records
+     * @param required Field names that must all have data
+     * @param oneOf    Field names of which at least one must have data (empty list = no constraint)
+     * @return Channel or List with only the matching records, projected to meta + the listed fields
+     */
+    @Function
+    Object filterWithRequiredAndOneOf(Object input, List<String> required, List<String> oneOf) {
+        return ChannelUtils.filterWithRequiredAndOneOf(input, required, oneOf)
+    }
+
+    /**
      * Collect Nextflow log files from a channel of records into [meta, file] tuples.
      * Expands each record's nf_logs field into individual tuples suitable for publishing.
      *

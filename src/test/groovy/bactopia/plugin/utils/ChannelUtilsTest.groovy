@@ -450,6 +450,147 @@ class ChannelUtilsTest extends Specification {
         ex.message == 'fields cannot be null or empty'
     }
 
+    // ---- filterWithRequiredAndOneOf() tests ----
+
+    def 'filterWithRequiredAndOneOf should keep records satisfying required and oneOf'() {
+        given: 'a record with an assembly and reads'
+        def records = [
+            [meta: [id: 'sample1'], fna: '/path/sample1.fna', r1: '/path/sample1_R1.fq', r2: '/path/sample1_R2.fq', tsv: 'extra.tsv']
+        ]
+
+        when: 'the filter runs with fna required and reads as oneOf'
+        def result = ChannelUtils.filterWithRequiredAndOneOf(records, ['fna'], ['r1', 'r2'])
+
+        then: 'the record survives, projected to meta plus the named fields only'
+        result.size() == 1
+        result[0] instanceof RecordMap
+        result[0].meta.id == 'sample1'
+        result[0].fna == '/path/sample1.fna'
+        result[0].r1 == '/path/sample1_R1.fq'
+        result[0].r2 == '/path/sample1_R2.fq'
+        result[0].keySet() as Set == (['meta', 'fna', 'r1', 'r2'] as Set)
+    }
+
+    def 'filterWithRequiredAndOneOf should drop records missing a required field'() {
+        given: 'one record without the required field and one with it'
+        def records = [
+            [meta: [id: 'noAssembly'], fna: null, r1: 'read1.fq', r2: 'read2.fq'],
+            [meta: [id: 'withAssembly'], fna: 'assembly.fna', r1: 'read1.fq', r2: 'read2.fq']
+        ]
+
+        when:
+        def result = ChannelUtils.filterWithRequiredAndOneOf(records, ['fna'], ['r1', 'r2'])
+
+        then: 'the sample without an assembly is dropped even though its reads are present'
+        result.size() == 1
+        result[0].meta.id == 'withAssembly'
+    }
+
+    def 'filterWithRequiredAndOneOf should drop records when no oneOf field has data'() {
+        given: 'a record with the required field but no reads'
+        def records = [
+            [meta: [id: 'assemblyOnly'], fna: 'assembly.fna', r1: null, r2: null, se: null, lr: []]
+        ]
+
+        when:
+        def result = ChannelUtils.filterWithRequiredAndOneOf(records, ['fna'], ['r1', 'r2', 'se', 'lr'])
+
+        then: 'the record is dropped (null and empty list both count as no data)'
+        result.isEmpty()
+    }
+
+    def 'filterWithRequiredAndOneOf should not constrain when oneOf is empty'() {
+        given: 'records where only one has the required field'
+        def records = [
+            [meta: [id: 'sample1'], fna: 'assembly.fna', r1: null],
+            [meta: [id: 'sample2'], fna: null, r1: 'read1.fq']
+        ]
+
+        when:
+        def result = ChannelUtils.filterWithRequiredAndOneOf(records, ['fna'], [])
+
+        then: 'only the assembly-bearing record survives, projected to meta + fna'
+        result.size() == 1
+        result[0].meta.id == 'sample1'
+        result[0].keySet() as Set == (['meta', 'fna'] as Set)
+    }
+
+    def 'filterWithRequiredAndOneOf should match filterWithData when required is empty'() {
+        given: 'records with only some of the checked fields present'
+        def records = [
+            [meta: [id: 'sample1'], r1: 'read1.fq', r2: null],
+            [meta: [id: 'sample2'], r1: null, r2: null]
+        ]
+
+        when: 'both helpers filter the same input'
+        def required = ChannelUtils.filterWithRequiredAndOneOf(records, [], ['r1', 'r2'])
+        def any = ChannelUtils.filterWithData(records, ['r1', 'r2'])
+
+        then: 'both keep exactly the same records'
+        required*.meta*.id == any*.meta*.id
+        required.size() == 1
+    }
+
+    def 'filterWithRequiredAndOneOf should treat a 0-byte file as no data'() {
+        given: 'an empty temp file and a temp file with content'
+        def emptyFile = File.createTempFile('bactopia-empty', '.fna')
+        def contentFile = File.createTempFile('bactopia-content', '.fna')
+        contentFile.text = '>contig\nACGT\n'
+
+        and: 'a record pointing at each'
+        def records = [
+            [meta: [id: 'empty'], fna: emptyFile, r1: 'read1.fq'],
+            [meta: [id: 'withData'], fna: contentFile, r1: 'read1.fq']
+        ]
+
+        when:
+        def result = ChannelUtils.filterWithRequiredAndOneOf(records, ['fna'], ['r1'])
+
+        then: 'only the file with content survives'
+        result.size() == 1
+        result[0].meta.id == 'withData'
+
+        cleanup:
+        emptyFile.delete()
+        contentFile.delete()
+    }
+
+    def 'filterWithRequiredAndOneOf should return empty for empty or all-empty input'() {
+        expect:
+        ChannelUtils.filterWithRequiredAndOneOf([], ['fna'], ['r1']).isEmpty()
+        ChannelUtils.filterWithRequiredAndOneOf([[meta: [id: 'sample1'], fna: null, r1: null]], ['fna'], ['r1']).isEmpty()
+        ChannelUtils.filterWithRequiredAndOneOf([[meta: [id: 'sample1'], fna: '', r1: []]], ['fna'], ['r1']).isEmpty()
+    }
+
+    def 'filterWithRequiredAndOneOf should throw on invalid arguments'() {
+        when: 'input is null'
+        ChannelUtils.filterWithRequiredAndOneOf(null, ['fna'], ['r1'])
+
+        then:
+        def nullInput = thrown(IllegalArgumentException)
+        nullInput.message == 'input cannot be null'
+
+        when: 'both lists are empty'
+        ChannelUtils.filterWithRequiredAndOneOf([], [], [])
+
+        then:
+        def bothEmpty = thrown(IllegalArgumentException)
+        bothEmpty.message == 'required and oneOf cannot both be empty'
+
+        when: 'both lists are null'
+        ChannelUtils.filterWithRequiredAndOneOf([], null, null)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when: 'a field name is blank'
+        ChannelUtils.filterWithRequiredAndOneOf([], ['fna'], [' '])
+
+        then:
+        def blankField = thrown(IllegalArgumentException)
+        blankField.message == 'field names cannot be null or empty'
+    }
+
     // DataflowQueue type recognition tests
 
     def 'gather should validate against DataflowQueue type'() {

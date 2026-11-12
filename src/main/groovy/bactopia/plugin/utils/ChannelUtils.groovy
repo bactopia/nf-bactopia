@@ -38,6 +38,42 @@ class ChannelUtils {
     }
 
     /**
+     * Test whether a record field actually carries data.
+     *
+     * null, blank strings, empty collections/maps, and 0-byte files count as no data.
+     * Note this is stricter than {@link #filterWithData}, which only rejects null values
+     * (and empty collections).
+     *
+     * @param value The field value to test
+     * @return true when the value holds data
+     */
+    private static boolean _hasData(Object value) {
+        if (value == null) {
+            return false
+        }
+        if (value instanceof CharSequence) {
+            return !value.toString().trim().isEmpty()
+        }
+        if (value instanceof Collection) {
+            return !((Collection) value).isEmpty()
+        }
+        if (value instanceof Map) {
+            return !((Map) value).isEmpty()
+        }
+        if (value instanceof java.nio.file.Path || value instanceof java.io.File) {
+            try {
+                def java.nio.file.Path path = value instanceof java.io.File
+                    ? ((java.io.File) value).toPath()
+                    : (java.nio.file.Path) value
+                return java.nio.file.Files.exists(path) && java.nio.file.Files.size(path) > 0
+            } catch (IOException e) {
+                return false
+            }
+        }
+        return true
+    }
+
+    /**
      * Core gather implementation. Extracts fields from a channel of records,
      * collects all values into sets, and wraps with a meta map into a record-like map.
      *
@@ -169,6 +205,57 @@ class ChannelUtils {
             def projected = new LinkedHashMap()
             projected['meta'] = _asRecordMap(r['meta'])
             for (f in fields) {
+                projected[f] = r[f]
+            }
+            return new RecordMap(projected)
+        }
+
+        if (input instanceof DataflowReadChannel || input instanceof DataflowWriteChannel) {
+            return input.map(filterAndProject).filter { v -> v != null }
+        } else {
+            return input.collect(filterAndProject).findAll { v -> v != null }
+        }
+    }
+
+    /**
+     * Keep records that satisfy a data requirement, then project them down to meta plus the listed fields.
+     *
+     * A record survives only when every field in {@code required} has data AND, when {@code oneOf} is
+     * non-empty, at least one field in {@code oneOf} has data. See {@link #_hasData} for what counts as
+     * data -- unlike {@link #filterWithData} a 0-byte file, a blank string, and an empty collection or map
+     * all count as no data.
+     *
+     * As with {@code filterWithData}, surviving records are projected to {@code meta} + the listed fields so
+     * downstream processes do not receive extra record fields that trip type-checking.
+     *
+     * @param input    Channel or List of records
+     * @param required Field names that must all have data
+     * @param oneOf    Field names of which at least one must have data (empty list = no constraint)
+     * @return Channel or List of projected records containing only meta + required + oneOf fields
+     * @throws IllegalArgumentException if input is null, required and oneOf are both null/empty,
+     *                                  or any field name is null/blank
+     */
+    static Object filterWithRequiredAndOneOf(Object input, List<String> required, List<String> oneOf) {
+        if (input == null) {
+            throw new IllegalArgumentException("input cannot be null")
+        }
+        def List<String> req = required == null ? [] : required.collect { String f -> f }
+        def List<String> any = oneOf == null ? [] : oneOf.collect { String f -> f }
+        if (req.isEmpty() && any.isEmpty()) {
+            throw new IllegalArgumentException("required and oneOf cannot both be empty")
+        }
+        (req + any).each { String f ->
+            if (f == null || f.trim().isEmpty()) {
+                throw new IllegalArgumentException("field names cannot be null or empty")
+            }
+        }
+
+        def filterAndProject = { r ->
+            if (!req.every { String f -> _hasData(r[f]) }) return null
+            if (!any.isEmpty() && !any.any { String f -> _hasData(r[f]) }) return null
+            def projected = new LinkedHashMap()
+            projected['meta'] = _asRecordMap(r['meta'])
+            for (String f in (req + any)) {
                 projected[f] = r[f]
             }
             return new RecordMap(projected)

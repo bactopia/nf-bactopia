@@ -139,7 +139,16 @@ class BactopiaMotD {
             "Why did the student steal a chair?" + "${colors.cyan}${colors.italic}Because they were told to take a seat!${colors.reset}",
             "What did the loaf say when it was finished baking? ${colors.cyan}${colors.italic}I'm bready!${colors.reset}",
             "What do sheep like to do during the summer? ${colors.cyan}${colors.italic}Have a baa-becue!${colors.reset}",
-            "What's the best way to catch a fish? ${colors.cyan}${colors.italic}Have someone throw it to you!${colors.reset}"
+            "What's the best way to catch a fish? ${colors.cyan}${colors.italic}Have someone throw it to you!${colors.reset}",
+            "Where should you keep your baseball mitt in the car? ${colors.cyan}${colors.italic}In the glove compartment!${colors.reset}",
+            "Where do you find books about oil in the library? ${colors.cyan}${colors.italic}In the non-friction section!${colors.reset}",
+            "What's the scariest plant in the forest? ${colors.cyan}${colors.italic}Bamboo!${colors.reset}",
+            "What month of the year do trees dread most? ${colors.cyan}${colors.italic}Sep-timberrrrrrrrrr!${colors.reset}",
+            "What is a superhero's favorite drink? ${colors.cyan}${colors.italic}Fruit punch!${colors.reset}",
+            "What music do mummies love to listen to? ${colors.cyan}${colors.italic}Wrap music!${colors.reset}",
+            "What kind of music do chiropractors love? ${colors.cyan}${colors.italic}Hip pop!${colors.reset}",
+            "What is an astronaut's favorite snack food? ${colors.cyan}${colors.italic}Moon pies!${colors.reset}",
+            "What does a cloud do when it gets an itch? ${colors.cyan}${colors.italic}It finds the nearest skyscraper!${colors.reset}"
         ]
         def random = new Random()
         def index = random.nextInt(messages.size())

@@ -35,6 +35,7 @@ include { gatherCsvtk         } from 'plugin/nf-bactopia'
 include { gatherFields        } from 'plugin/nf-bactopia'
 include { formatSamples       } from 'plugin/nf-bactopia'
 include { filterWithData      } from 'plugin/nf-bactopia'
+include { filterWithRequiredAndOneOf } from 'plugin/nf-bactopia'
 include { collectNextflowLogs } from 'plugin/nf-bactopia'
 include { combineWith         } from 'plugin/nf-bactopia'
 ```
@@ -59,6 +60,10 @@ gatherFields(MODULE, [gff: 'gff', tsv: 'tsv'], [name: 'prokka'])
 ```groovy
 // Filter records where at least one field has data
 filterWithData(MODULE, ['tsv', 'gff'])
+
+// Filter records that must have `fna` and at least one of the read fields,
+// projecting the survivors to meta + those fields
+filterWithRequiredAndOneOf(MODULE, ['fna'], ['r1', 'r2', 'se', 'lr'])
 
 // Cartesian product of gathered results with reference files
 combineWith(gathered_ch, references_ch, 'reference')

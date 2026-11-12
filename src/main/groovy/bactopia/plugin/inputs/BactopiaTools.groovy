@@ -2,6 +2,7 @@ package bactopia.plugin.inputs
 
 import groovy.util.logging.Slf4j
 import java.nio.file.Path
+import nextflow.Nextflow
 import nextflow.util.RecordMap
 
 import static bactopia.plugin.utils.EmptyFiles.isEmptyFile
@@ -90,7 +91,7 @@ class BactopiaTools {
         if (fofn) {
             // Check if the file exists, and if so collect the samples
             if (fileExists(fofn)) {
-                new File(fofn).eachLine { line ->
+                Nextflow.file(fofn).eachLine { line ->
                     def sample = line.trim().split('\t')[0]
                     if (sample) {
                         samples << sample
